@@ -1,3 +1,7 @@
+# NEB related
+tumblr.json
+neb.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
