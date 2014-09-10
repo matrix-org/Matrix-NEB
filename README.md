@@ -5,7 +5,7 @@ This is a generic client bot for Matrix which supports plugins.
 
 Setup
 =====
-First time:
+First time (you'll be prompted where to store the generated config file):
 
     python neb.py -r <username> -u <home server url>
   
