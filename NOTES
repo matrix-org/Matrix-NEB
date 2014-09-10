@@ -1,0 +1,26 @@
+This file contains general notes for things which need to be done.
+
+Plugins
+-------
+- Add helper classes for plugins (many plugins will pull from A to dump in B, and
+this can be factored out)
+- Store ALL THE STATE in rooms, there shouldn't be config files lying around.
+- Make rooms read-only where they need to be.
+- Allow certain users to do special things? (op user list)
+
+Potential APIs
+--------------
+- Remote social/news: RSS, Digg, Reddit, Pinterest, Tumblr, Facebook, G+, BBC(?)
+- Remote computation: Google, Wolfram Alpha, Dictionary/Thesaurus, Currency conversions, Weather, Transport info
+- Local computation: Conversion of units (lb/kg, oct/hex/dec, etc)
+- Randoms: Urban define, XKCD, random small games (rock/paper/scissors), emotes e.g. !fluffle
+- Chat integration: IRC
+
+
+Protocol considerations
+-----------------------
+- Keep text / images / etc as standard m. formats
+- Custom state events per plugin (to store plugin specific info, namespaced)
+- Wary about introducing new message event types, maybe a neb.command so they
+  can be silenced from other users?
+
