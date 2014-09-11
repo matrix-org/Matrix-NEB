@@ -5,6 +5,7 @@ import json
 from neb.matrix import Matrix, MatrixConfig
 from plugins.tumblr import TumblrPlugin
 from plugins.b64 import Base64Plugin
+from plugins.guess_number import GuessNumberPlugin
 
 import logging
 import sys
@@ -58,7 +59,8 @@ def main(config):
     log.debug("Setting up plugins...")
     plugins = [
         TumblrPlugin(),
-        Base64Plugin()
+        Base64Plugin(),
+        GuessNumberPlugin()
     ]
     
     for plugin in plugins:

@@ -97,7 +97,6 @@ class TumblrPlugin(Plugin):
                 "follow <username> <opts>: Follow username.tumblr.com with the specified options. ",
                 "Options include:",
                 "  '--upload-images' : Re-upload images from Tumblr to the HS.",
-                "  '--hermes' : Submit messages in kegsay.message.hermes format rather than m.room.message.",
                 "  '--secret' : Keeps this between us, and don't make a public room for this. Read-only.",
                  "  '--social' : The created room will be private, but you will have permission to invite people and send messages."
             ])
