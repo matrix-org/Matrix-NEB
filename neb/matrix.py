@@ -174,12 +174,16 @@ class Matrix(object):
                     c = self.cmds[cmd]
                     responses = c.func(event, shlex.split(body[1:].encode("ascii"))) # shlex hates utf8
                     if responses:
-                        for res in responses:
-                            self.send_message(room, res)
+                        if type(responses) == list:
+                            for res in responses:
+                                self.send_message(room, res)
+                        else:
+                            self.send_message(room, responses)
                 else:
                     self.send_message(room, self._body("Unknown command."))
             except Exception as e:
                 log.exception(e)
+                self.send_message(room, self._body("Fatal error when processing command."))
         else:
             self.send_message(
                 event["room_id"], 
