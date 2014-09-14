@@ -1,6 +1,8 @@
 from neb.engine import Plugin, Command
 from neb import NebError
 
+from pytumblr import TumblrRestClient
+
 from xml.dom import minidom
 import json
 import threading
@@ -15,17 +17,7 @@ class TumblrStore(object):
     
     def __init__(self, config_loc="tumblr.json"):
         self.config = {
-            "usernames" : {
-                "__username__" : {
-                    "room_id": "!room:localhost"
-                }
-            },
-            "rooms": {
-                "__room_id__" : {
-                    "position" : 0,
-                    "username" : "__username__"
-                }
-            }
+            "version": "0.0.1"
         }
         self.config_loc = config_loc
         self._load()
@@ -34,6 +26,7 @@ class TumblrStore(object):
         try:
             with open(self.config_loc, 'r') as f:
                 self.config = json.loads(f.read())
+                log.debug("Set from config.")
         except:
             log.debug("Creating new config: %s", self.config_loc)
             self._save()
@@ -42,55 +35,89 @@ class TumblrStore(object):
         with open(self.config_loc, 'w') as f:
             f.write(json.dumps(self.config, indent=4))
             
-    def get_info(self, username):
-        info = self.get(username=username)
-        return self.get(room_id=info["room_id"])
-        
-    def get(self, room_id=None, username=None):
-        if not room_id and not username:
-            return None
-        if room_id and room_id in self.config["rooms"]:
-            return self.config["rooms"][room_id]
-        if username and username in self.config["usernames"]:
-            return self.config["usernames"][username]
-    
-    def map_room(self, room, username, position=0, save=True, clobber=False):
-        updated = False
-        if clobber:
-            self.config["usernames"][username] = {
-                "room_id": room
-            }
-            self.config["rooms"][room] = {
-                "position": position,
-                "username": username
-            }
-            updated = True
-        elif room not in self.config["rooms"] or username not in self.config["usernames"]:
-            updated = self.map_room(room, username, position=0, save=False, clobber=True)
-            
+    def has(self, key):
+        return key in self.config
+
+    def set(self, key, value, save=True):
+        self.config[key] = value
         if save:
             self._save()
-            
-        return updated
-        
+
+    def get(self, key):
+        return self.config[key]
 
 class TumblrPlugin(Plugin):
     """ Plugin for trawling Tumblr's API.
-    
+
     New events:
       Type: neb.plugin.tumblr.username
       State: Yes
       Content: { username: foo }
-      
+
       Type: neb.plugin.tumblr.position
       State: Yes
       Content: { unixts: 1234 }
-    
     """
+
+    def get_info(self, username):
+        info = self._get(username=username)
+        return self._get(room_id=info["room_id"])
+        
+    def _get(self, room_id=None, username=None):
+        if not room_id and not username:
+            return None
+        if room_id and room_id in self.state["rooms"]:
+            return self.state["rooms"][room_id]
+        if username and username in self.state["usernames"]:
+            return self.state["usernames"][username]
+    
+    def map_room(self, room, username, position=0, clobber=False):
+        updated = False
+        if clobber:
+            self.state["usernames"][username] = {
+                "room_id": room
+            }
+            self.state["rooms"][room] = {
+                "position": position,
+                "username": username
+            }
+            updated = True
+        elif room not in self.state["rooms"] or username not in self.state["usernames"]:
+            updated = self.map_room(room, username, position=0, clobber=True)
+            
+        return updated
 
     def __init__(self, config="tumblr.json"):
         self.config = TumblrStore(config)
-        
+
+        self._check_keys()
+
+        self.client = TumblrRestClient(
+            self.config.get("consumer_key"),
+            self.config.get("secret_key"),
+            self.config.get("oauth_token"),
+            self.config.get("token_secret"),
+        )
+
+        # set from initial sync
+        self.state = {
+            "rooms": {},
+            "usernames": {}    
+        }
+
+    def _check_keys(self):
+        keylist = [
+            ("consumer_key", "Tumblr API v2 Consumer Key: "),
+            ("secret_key", "Tumblr API v2 Secret Key: "),
+            ("oauth_token", "Tumblr API v2 OAuth Token: "),
+            ("token_secret", "Tumblr API v2 Token Secret: "),
+        ]
+        for (key, desc) in keylist:
+            if not self.config.has(key):
+                val = raw_input(desc).strip()
+                self.config.set(key, val)
+
+
     def get_commands(self):
         return [
             Command("follow", self.follow, "Follow username.tumblr.com", [ 
@@ -123,14 +150,15 @@ class TumblrPlugin(Plugin):
                     
             if username and position:
                 log.info("Syncing state for room %s (%s)", room_id, username)
-                self.config.map_room(
+                
+                self.map_room(
                     username=username,
                     room=room_id,
                     clobber=True,
                     position=position
                 )
             elif username:
-                if self.config.map_room(
+                if self.map_room(
                     username=username,
                     room=room_id,
                     clobber=False
@@ -138,13 +166,14 @@ class TumblrPlugin(Plugin):
                     log.info("Synced new state for %s (%s) as don't have it.", room_id, username)
                 else:
                     log.info("Synced existing state for %s (%s)", room_id, username)
-        
+       
+            print json.dumps(self.state, indent=4) 
         
     def follow(self, event, args):
         username = args[1]
         log.info("Follow request for %s", username)
         
-        room_info = self.config.get(username=username)
+        room_info = self._get(username=username)
         if room_info:
             room_id = room_info["room_id"]
             log.debug("Username %s to %s found in cache.", username, room_id)
@@ -165,7 +194,7 @@ class TumblrPlugin(Plugin):
         
         user = event["user_id"]
         self.matrix.invite_user(room_id, user)
-        self.config.map_room(username=username, room=room_id)
+        self.map_room(username=username, room=room_id)
         log.debug("Invited %s to room %s. Reason: They issued a follow.", user, room_id)
         
         # setup state in room
@@ -201,11 +230,11 @@ class TumblrPlugin(Plugin):
         # FIXME : Do something about this.
         threading._sleep(1 + (rate_limit_sleep_dur/1000))
         
-        current_pos = self.config.get_info(username=username)["position"]
+        current_pos = self.get_info(username=username)["position"]
         new_pos = posts["position"]
         if current_pos != new_pos:
             log.debug("Updating position for room %s from %s to %s", room_id, current_pos, new_pos)
-            self.config.map_room(room=room_id, username=username, position=new_pos, clobber=True, save=True)
+            self.map_room(room=room_id, username=username, position=new_pos, clobber=True)
             self.update_pos(room_id, new_pos)
         
         return responses
@@ -237,7 +266,7 @@ class TumblrPlugin(Plugin):
         posts = doc.getElementsByTagName("post")
         log.debug("Parsed XML: found %s posts for %s.", len(posts), user)
         entries = []
-        current_pos = self.config.get_info(username=user)["position"]
+        current_pos = self.get_info(username=user)["position"]
         new_pos = current_pos
         log.debug("%s old pos = %s", user, current_pos)
         for p in posts:
