@@ -91,7 +91,7 @@ class Matrix(object):
     def register(self):
         url = self._url("/register", with_token=False)
         content = {
-            "user_id": self.config.user_id,
+            "user": self.config.user_id,
             "type": "m.login.password",
             "password": self.config.password
         }
