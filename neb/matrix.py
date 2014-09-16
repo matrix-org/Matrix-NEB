@@ -17,18 +17,21 @@ class MatrixConfig(object):
     URL = "url"
     USR = "user"
     TOK = "token"
+    PAS = "password"
 
-    def __init__(self, hs_url, user_id, access_token):
+    def __init__(self, hs_url, user_id, access_token, password):
         self.user_id = user_id;
         self.token = access_token
         self.base_url = hs_url
+        self.password = password
         
     @classmethod
     def to_file(cls, config, f):
         f.write(json.dumps({
             MatrixConfig.URL: config.base_url,
             MatrixConfig.TOK: config.token,
-            MatrixConfig.USR: config.user_id
+            MatrixConfig.USR: config.user_id,
+            MatrixConfig.PAS: config.password
         }, indent=4))
         
     @classmethod
@@ -37,7 +40,8 @@ class MatrixConfig(object):
         return MatrixConfig(
             hs_url=j[MatrixConfig.URL], 
             user_id=j[MatrixConfig.USR], 
-            access_token=j[MatrixConfig.TOK]
+            access_token=j[MatrixConfig.TOK],
+            password=j[MatrixConfig.PAS]
         )
         
 class PutRequest(Request):
@@ -61,8 +65,9 @@ class Matrix(object):
             return url + "?" + urllib.urlencode(query)
         return url
         
-    def _open(self, url, content=None, as_PUT=False):
-        log.debug("open url >>> %s  >>>> %s", url, content)
+    def _open(self, url, content=None, as_PUT=False, redact=False):
+        if not redact:
+            log.debug("open url >>> %s  >>>> %s", url, content)
         req = url
         if content and as_PUT:
             log.debug("Sending as a PUT")
@@ -86,9 +91,11 @@ class Matrix(object):
     def register(self):
         url = self._url("/register", with_token=False)
         content = {
-            "user_id": self.config.user_id
+            "user_id": self.config.user_id,
+            "type": "m.login.password",
+            "password": self.config.password
         }
-        return self._open(url, content)
+        return self._open(url, content, redact=True)
         
     def initial_sync(self):
         url = self._url("/initialSync", {"limit": 1})

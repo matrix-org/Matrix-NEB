@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import getpass
 import json
 
 from neb.matrix import Matrix, MatrixConfig
@@ -26,11 +27,12 @@ log = logging.getLogger(name=__name__)
 # - Send actual images, not just links!!! Implement ALL THE CONFIG OPTIONS.
 # - Tumblr config needs a private_rooms key for people who duplicate public #channels so they don't clash.
 
-def generate_config(url, username):
+def generate_config(url, username, password):
     config = MatrixConfig(
             hs_url=url, 
             user_id=username, 
-            access_token=None
+            access_token=None,
+            password=password
     )
     m = Matrix(config)
     
@@ -89,7 +91,13 @@ if __name__ == '__main__':
         config = load_config(args.config)
     elif args.register and args.url:
         log.info("Creating config for user %s on home server %s", args.register, args.url)
-        config = generate_config(args.url, args.register)
+        password = "_"
+        password2 = "__"
+        while password != password2:
+            password = getpass.getpass("Enter a password for this new account: ")
+            password2 = getpass.getpass("Reconfirm the password: ")
+
+        config = generate_config(args.url, args.register, password)
     else:
         a.print_help()
         print "You probably want to run something like 'python neb.py -r neb -u \"http://localhost:8008/_matrix/client/api/v1\"'"
