@@ -11,7 +11,8 @@ setup(
     packages = ['neb', 'plugins'],
     license = "LICENSE",
     install_requires = [
-        "pytumblr"
+        "pytumblr",
+        "requests"
     ],
     dependency_links=[
         "git+ssh://git@github.com/tumblr/pytumblr.git",
