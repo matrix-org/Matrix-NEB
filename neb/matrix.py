@@ -18,12 +18,14 @@ class MatrixConfig(object):
     USR = "user"
     TOK = "token"
     PAS = "password"
+    ADM = "admins"
 
-    def __init__(self, hs_url, user_id, access_token, password):
+    def __init__(self, hs_url, user_id, access_token, password, admins):
         self.user_id = user_id
         self.token = access_token
         self.base_url = hs_url
         self.password = password
+        self.admins = admins
 
     @classmethod
     def to_file(cls, config, f):
@@ -31,7 +33,8 @@ class MatrixConfig(object):
             MatrixConfig.URL: config.base_url,
             MatrixConfig.TOK: config.token,
             MatrixConfig.USR: config.user_id,
-            MatrixConfig.PAS: config.password
+            MatrixConfig.PAS: config.password,
+            MatrixConfig.ADM: config.admins
         }, indent=4))
 
     @classmethod
@@ -41,7 +44,8 @@ class MatrixConfig(object):
             hs_url=j[MatrixConfig.URL],
             user_id=j[MatrixConfig.USR],
             access_token=j[MatrixConfig.TOK],
-            password=j[MatrixConfig.PAS]
+            password=j[MatrixConfig.PAS],
+            admins=j[MatrixConfig.ADM]
         )
 
 

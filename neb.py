@@ -35,7 +35,8 @@ def generate_config(url, username, password):
             hs_url=url,
             user_id=username,
             access_token=None,
-            password=password
+            password=password,
+            admins=[]
     )
     m = Matrix(config)
 
