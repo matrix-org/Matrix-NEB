@@ -8,6 +8,7 @@ from plugins.tumblr import TumblrPlugin
 from plugins.b64 import Base64Plugin
 from plugins.guess_number import GuessNumberPlugin
 from plugins.jira import JiraPlugin
+from plugins.url import UrlPlugin
 
 import logging
 import sys
@@ -67,7 +68,8 @@ def main(config):
     #    TumblrPlugin(),
         Base64Plugin(),
     #    GuessNumberPlugin(),
-        JiraPlugin()
+        JiraPlugin(),
+        UrlPlugin()
     ]
 
     for plugin in plugins:

@@ -178,7 +178,8 @@ class Matrix(object):
                             self.send_message(room, help_msg)
                 elif cmd in self.cmds:
                     c = self.cmds[cmd]
-                    responses = c.func(event, shlex.split(body[1:].encode("ascii"))) # shlex hates utf8
+                    args = shlex.split(body[1:].encode("utf8"))
+                    responses = c.func(event, args)
                     if responses:
                         if type(responses) == list:
                             for res in responses:
