@@ -230,7 +230,7 @@ class Matrix(object):
     def event_loop(self):
         end = "END"
         while True:
-            url = self._url("/events", {"timeout": 5000, "from": end})
+            url = self._url("/events", {"timeout": 30000, "from": end})
             j= self._open(url)
             end = j["end"]
             events = j["chunk"]
