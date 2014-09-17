@@ -41,6 +41,10 @@ class Plugin(object):
         '"""
         pass
 
+    def on_event(self, event, event_type):
+        """A random event has come down the stream."""
+        pass
+
     def _body(self, text):
         return {
             "msgtype": "m.text",

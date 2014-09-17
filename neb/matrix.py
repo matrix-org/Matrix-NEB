@@ -211,6 +211,12 @@ class Matrix(object):
         }
         try:
             switch[etype](event)
+        except KeyError:
+            try:
+                for p in self.plugins:
+                    p.on_event(event, etype)
+            except Exception as e:
+                log.exception(e)
         except Exception as e:
             print "Couldn't process event: %s" % e
 

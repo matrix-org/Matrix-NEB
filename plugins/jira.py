@@ -96,7 +96,7 @@ class JiraPlugin(Plugin):
         project_keys = [a.strip() for a in project_keys_csv.split(',')]
         if not project_keys_csv:
             try:
-                return self._body("Currently tracking %s" % self.state[event["room_id"]]["display"])
+                return self._body("Currently tracking %s" % json.dumps(self.state[event["room_id"]]["display"]))
             except KeyError:
                 return self._body("Not tracking any projects currently.")
 
@@ -148,9 +148,25 @@ class JiraPlugin(Plugin):
             if project in projects:
                 try:
                     issue_info = self._get_issue_info(key)
-                    self.matrix.send_message(event["room_id"], self._body(issue_info))
+                    if issue_info:
+                        self.matrix.send_message(
+                            event["room_id"],
+                            self._body(issue_info)
+                        )
                 except Exception as e:
                     log.exception(e)
+
+    def on_event(self, event, event_type):
+        if event_type == "neb.plugin.jira.issues.display":
+            self._set_display_event(event)
+
+    def _set_display_event(self, event):
+        room_id = event["room_id"]
+        issues = event["content"]["display"]
+        if type(issues) == list:
+            self.state[room_id]["display"] = issues
+        else:
+            self.state[room_id]["display"] = []
 
     def sync(self, matrix, sync):
         self.matrix = matrix
@@ -166,11 +182,7 @@ class JiraPlugin(Plugin):
             try:
                 for state in room["state"]:
                     if state["type"] == "neb.plugin.jira.issues.display":
-                        issues = state["content"]["display"]
-                        if type(issues) == list:
-                            self.state[room_id]["display"] = issues
-                        else:
-                            self.state[room_id]["display"] = []
+                        self._set_display_event(state)
             except KeyError:
                 pass
 
@@ -179,7 +191,11 @@ class JiraPlugin(Plugin):
 
     def _get_issue_info(self, issue_key):
         url = self._url("/rest/api/2/issue/%s" % issue_key)
-        response = json.loads(requests.get(url, auth=self.auth).text)
+        res = requests.get(url, auth=self.auth)
+        if res.status_code != 200:
+            return
+
+        response = json.loads(res.text)
         link = "%s/browse/%s" % (self.store.get("url"), issue_key)
         desc = response["fields"]["summary"]
         status = response["fields"]["status"]["name"]
