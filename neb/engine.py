@@ -36,6 +36,11 @@ class Plugin(object):
         """
         pass
 
+    def on_msg(self, event, body):
+        """An m.room.message has been received which isn't a command.
+        '"""
+        pass
+
     def _body(self, text):
         return {
             "msgtype": "m.text",

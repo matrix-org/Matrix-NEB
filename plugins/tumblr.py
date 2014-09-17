@@ -134,6 +134,7 @@ class TumblrPlugin(Plugin):
                 else:
                     log.info("Synced existing state for %s (%s)", room_id, username)
 
+            print "Plugin: Tumblr Sync state:"
             print json.dumps(self.state, indent=4)
 
     def follow(self, event, args):
