@@ -161,9 +161,11 @@ class Matrix(object):
 
     def parse_membership(self, event):
         if event["state_key"] == self.config.user_id and event["content"]["membership"] == "invite":
-            # TODO : Have a whitelist of users to join automatically from.
-            # self.join_room(event["room_id"])
-            pass
+            user_id = event["user_id"]
+            if user_id in self.config.admins:
+                self.join_room(event["room_id"])
+            else:
+                log.info("Refusing invite, %s not in admin list. Event: %s", user_id, event)
 
     def parse_msg(self, event):
         body = event["content"]["body"]
