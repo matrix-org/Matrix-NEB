@@ -157,7 +157,9 @@ class Matrix(object):
 
     def parse_membership(self, event):
         if event["state_key"] == self.config.user_id and event["content"]["membership"] == "invite":
-            self.join_room(event["room_id"])
+            # TODO : Have a whitelist of users to join automatically from.
+            # self.join_room(event["room_id"])
+            pass
 
     def parse_msg(self, event):
         body = event["content"]["body"]
@@ -192,6 +194,12 @@ class Matrix(object):
             self.send_message(
                 event["room_id"],
                 self._body("N E Bot v0.1.0 - Type !help to begin. Type !help <command> for help on a command."))
+        else:
+            try:
+                for p in self.plugins:
+                    p.on_msg(event, body)
+            except Exception as e:
+                log.exception(e)
 
     def event_proc(self, event):
         etype =  event["type"]

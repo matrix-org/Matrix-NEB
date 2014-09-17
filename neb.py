@@ -64,9 +64,9 @@ def main(config):
 
     log.debug("Setting up plugins...")
     plugins = [
-        TumblrPlugin(),
+    #    TumblrPlugin(),
         Base64Plugin(),
-        GuessNumberPlugin(),
+    #    GuessNumberPlugin(),
         JiraPlugin()
     ]
 
