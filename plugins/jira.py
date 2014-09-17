@@ -163,6 +163,10 @@ class JiraPlugin(Plugin):
     def _set_display_event(self, event):
         room_id = event["room_id"]
         issues = event["content"]["display"]
+
+        if room_id not in self.state:
+            self.state[room_id] = {}
+
         if type(issues) == list:
             self.state[room_id]["display"] = issues
         else:

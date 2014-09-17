@@ -160,6 +160,7 @@ class Matrix(object):
         }
 
     def parse_membership(self, event):
+        log.info("Parsing membership: %s", event)
         if event["state_key"] == self.config.user_id and event["content"]["membership"] == "invite":
             user_id = event["user_id"]
             if user_id in self.config.admins:
