@@ -20,11 +20,11 @@ class MatrixConfig(object):
     PAS = "password"
 
     def __init__(self, hs_url, user_id, access_token, password):
-        self.user_id = user_id;
+        self.user_id = user_id
         self.token = access_token
         self.base_url = hs_url
         self.password = password
-        
+
     @classmethod
     def to_file(cls, config, f):
         f.write(json.dumps({
@@ -33,21 +33,23 @@ class MatrixConfig(object):
             MatrixConfig.USR: config.user_id,
             MatrixConfig.PAS: config.password
         }, indent=4))
-        
+
     @classmethod
     def from_file(cls, f):
         j = json.load(f)
         return MatrixConfig(
-            hs_url=j[MatrixConfig.URL], 
-            user_id=j[MatrixConfig.USR], 
+            hs_url=j[MatrixConfig.URL],
+            user_id=j[MatrixConfig.USR],
             access_token=j[MatrixConfig.TOK],
             password=j[MatrixConfig.PAS]
         )
-        
+
+
 class PutRequest(Request):
-    
+
     def get_method(self):
         return "PUT"
+
 
 class Matrix(object):
     PREFIX = "!"
@@ -56,7 +58,7 @@ class Matrix(object):
         self.config = config
         self.plugins = []
         self.cmds = {}
-        
+
     def _url(self, path, query={}, with_token=True):
         url = self.config.base_url + path
         if with_token:
@@ -64,7 +66,7 @@ class Matrix(object):
         if query:
             return url + "?" + urllib.urlencode(query)
         return url
-        
+
     def _open(self, url, content=None, as_PUT=False, redact=False):
         if not redact:
             log.debug("open url >>> %s  >>>> %s", url, content)
@@ -72,10 +74,10 @@ class Matrix(object):
         if content and as_PUT:
             log.debug("Sending as a PUT")
             req = PutRequest(url)
-            
+
         if content is not None:
             content = json.dumps(content)
-            
+
         try:
             response = urllib2.urlopen(req, data=content)
             if response.code != 200:
@@ -87,7 +89,7 @@ class Matrix(object):
             return json.loads(response.read())
         except urllib2.HTTPError as e:
             raise NebError(e.getcode(), e.read())
-            
+
     def register(self):
         url = self._url("/register", with_token=False)
         content = {
@@ -96,11 +98,11 @@ class Matrix(object):
             "password": self.config.password
         }
         return self._open(url, content, redact=True)
-        
+
     def initial_sync(self):
         url = self._url("/initialSync", {"limit": 1})
         return self._open(url)
-        
+
     def create_room(self, alias):
         url = self._url("/createRoom")
         log.debug("create_room %s   %s", alias, type(alias))
@@ -109,28 +111,24 @@ class Matrix(object):
         }
         log.debug("create_room >>>> %s", content)
         return self._open(url, content)
-        
+
     def send_message(self, room_id, content):
         return self.send_event(room_id, "m.room.message", content, state=False)
-        
+
     def send_event(self, room_id, event_type, content, state=False):
         state_path = "state" if state else "send"
         url = self._url("/rooms/%s/%s/%s" % (urllib.quote(room_id), state_path, event_type))
         return self._open(url, content, as_PUT=state)
-            
+
     def join_room(self, room_id):
         url = self._url("/join/%s" % urllib.quote(room_id))
         self._open(url, {})
-        
+
     def invite_user(self, room_id, user_id):
         log.debug("Inviting %s to %s", user_id, room_id)
         url = self._url("/rooms/%s/invite" % urllib.quote(room_id))
         return self._open(url, {"user_id": user_id})
-        
-        
-        
-        
-            
+
     def add_plugin(self, plugin):
         log.debug("add_plugin %s", plugin)
         self.plugins.append(plugin)
@@ -138,30 +136,29 @@ class Matrix(object):
             if cmd.cmd in self.cmds:
                 raise NebError("Command %s already exists.", cmd.cmd)
             self.cmds[cmd.cmd] = cmd
-        
+
     def setup(self):
         sync = self.initial_sync()
         log.debug("Notifying plugins of initial sync results")
         for plugin in self.plugins:
             plugin.sync(self, sync)
 
-
     def _help(self):
         msgs = []
         for (cmd, obj) in self.cmds.iteritems():
             msgs.append(self._body(Matrix.PREFIX + cmd + " : " + obj.summary))
         return msgs
-    
+
     def _body(self, text):
-        return { 
+        return {
             "msgtype": "m.text",
             "body": text
         }
-            
+
     def parse_membership(self, event):
         if event["state_key"] == self.config.user_id and event["content"]["membership"] == "invite":
-            self.join_room(event["room_id"])            
-                
+            self.join_room(event["room_id"])
+
     def parse_msg(self, event):
         body = event["content"]["body"]
         if event["user_id"] == self.config.user_id:
@@ -191,9 +188,9 @@ class Matrix(object):
             except Exception as e:
                 log.exception(e)
                 self.send_message(room, self._body("Fatal error when processing command."))
-        else:
+        elif body.lower() == "neb?":
             self.send_message(
-                event["room_id"], 
+                event["room_id"],
                 self._body("N E Bot v0.1.0 - Type !help to begin. Type !help <command> for help on a command."))
 
     def event_proc(self, event):
@@ -206,7 +203,7 @@ class Matrix(object):
             switch[etype](event)
         except Exception as e:
             print "Couldn't process event: %s" % e
-            
+
     def event_loop(self):
         end = "END"
         while True:

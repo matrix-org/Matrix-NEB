@@ -28,57 +28,62 @@ log = logging.getLogger(name=__name__)
 # - Send actual images, not just links!!! Implement ALL THE CONFIG OPTIONS.
 # - Tumblr config needs a private_rooms key for people who duplicate public #channels so they don't clash.
 
+
 def generate_config(url, username, password):
     config = MatrixConfig(
-            hs_url=url, 
-            user_id=username, 
+            hs_url=url,
+            user_id=username,
             access_token=None,
             password=password
     )
     m = Matrix(config)
-    
+
     log.info("Registering user %s", username)
     response = m.register()
     config.user_id = response["user_id"]
     config.token = response["access_token"]
-    
+
     fname = raw_input("Enter name of config file: ")
     log.info("Saving config to %s", fname)
     save_config(fname, config)
     return config
-    
-    
+
+
 def save_config(loc, config):
     with open(loc, 'w') as f:
         MatrixConfig.to_file(config, f)
-    
+
+
 def load_config(loc):
     with open(loc, 'r') as f:
         return MatrixConfig.from_file(f)
 
+
 def main(config):
     matrix = Matrix(config)
-    
+
     log.debug("Setting up plugins...")
     plugins = [
-    #    TumblrPlugin(),
+        TumblrPlugin(),
         Base64Plugin(),
         GuessNumberPlugin(),
         JiraPlugin()
     ]
-    
+
     for plugin in plugins:
         matrix.add_plugin(plugin)
-    
+
     matrix.setup()
-       
+
     try:
         log.info("Listening for incoming events.")
         matrix.event_loop()
-        
+
     except Exception as e:
         log.error("Ruh roh: %s", e)
+
     log.info("Terminating.")
+
 
 if __name__ == '__main__':
     a = argparse.ArgumentParser("Runs NEB. See plugins for commands.")
@@ -86,7 +91,7 @@ if __name__ == '__main__':
     a.add_argument("-u", "--url", help="The home server url up to the version path e.g. localhost/_matrix/client/api/v1", dest="url")
     a.add_argument("-r", "--register", help="Register a new account as the specified username.", dest="register")
     args = a.parse_args()
-    
+
     config = None
     if args.config:
         log.info("Loading config from %s", args.config)
@@ -104,9 +109,9 @@ if __name__ == '__main__':
         a.print_help()
         print "You probably want to run something like 'python neb.py -r neb -u \"http://localhost:8008/_matrix/client/api/v1\"'"
         print "After you make a config file, you probably want to run 'python neb.py -c CONFIG_NAME'"
-        
+
     if config:
         main(config)
-    
-    
-    
+
+
+
