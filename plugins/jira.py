@@ -41,6 +41,13 @@ class JiraPlugin(Plugin):
         self.auth = (self.store.get("user"), self.store.get("pass"))
         self.regex = re.compile(r"\b(([A-Za-z]+)-\d+)\b")
 
+        self.help_msgs = [
+            "server-info :: Retrieve server information.",
+            "track-issues AAA,BBB,CCC :: Display information about bugs which have " +
+            "the project key AAA, BBB or CCC.",
+            "clear-issues :: Stops tracking all issues."
+        ]
+
     def get_commands(self):
         """Return human readable commands with descriptions.
 
@@ -48,17 +55,13 @@ class JiraPlugin(Plugin):
             list[Command]
         """
         return [
-            Command("jira", self.jira, "Perform commands on a JIRA platform.", [
-            "server-info :: Retrieve server information.",
-            "track-issues AAA,BBB,CCC :: Display information about bugs which have " +
-            "the project key AAA, BBB or CCC.",
-            "clear-issues :: Stops tracking all issues."
-            ]),
+            Command("jira", self.jira, "Perform commands on a JIRA platform.",
+                    self.help_msgs),
         ]
 
     def jira(self, event, args):
         if len(args) == 1:
-            return self._body("Perform commands on a JIRA platform.")
+            return [self._body(x) for x in self.help_msgs]
 
         action = args[1]
         actions = {
@@ -81,6 +84,7 @@ class JiraPlugin(Plugin):
             },
             state=True
         )
+        self._send_display_event(event["room_id"], [])
 
         url = self.store.get("url")
         return self._body(
@@ -100,18 +104,22 @@ class JiraPlugin(Plugin):
             if not re.match("[A-Z][A-Z_0-9]+", key):
                 return self._body("Key %s isn't a valid project key." % key)
 
+        self._send_display_event(event["room_id"], project_keys)
+
+
+        url = self.store.get("url")
+        return self._body(
+            "Issues for projects %s from %s will be displayed as they are mentioned." % (project_keys, url)
+        )
+
+    def _send_display_event(self, room_id, project_keys):
         self.matrix.send_event(
-            event["room_id"],
+            room_id,
             "neb.plugin.jira.issues.display",
             {
                 "display": project_keys
             },
             state=True
-        )
-
-        url = self.store.get("url")
-        return self._body(
-            "Issues for projects %s from %s will be displayed as they are mentioned." % (project_keys, url)
         )
 
     def _server_info(self, event, args):
