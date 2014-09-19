@@ -226,7 +226,7 @@ class GithubWebServer(threading.Thread):
 
         if self.secret_token:
             token_sha1 = request.headers.get('X-Hub-Signature')
-            calc_sha1 = hashlib.sha1("sha1=" + self.secret_token).hexdigest()
+            calc_sha1 = "sha1=" + hashlib.sha1(self.secret_token).hexdigest()
             if token_sha1 != calc_sha1:
                 log.warn("GithubWebServer: FAILED SECRET TOKEN AUTH. IP=%s",
                          request.remote_addr)
