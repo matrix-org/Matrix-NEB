@@ -236,7 +236,7 @@ class JiraPlugin(Plugin):
     def get_webhook_json_keys(self, j):
         key = j['issue']['key']
         user = j['user']['name']
-        self_key = json['issue']['self']
+        self_key = j['issue']['self']
         summary = self.get_webhook_summary(j)
         action = ""
 
