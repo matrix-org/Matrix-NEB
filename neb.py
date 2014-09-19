@@ -9,6 +9,7 @@ from plugins.b64 import Base64Plugin
 from plugins.guess_number import GuessNumberPlugin
 from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
+from plugins.github import GithubPlugin
 
 import logging
 import sys
@@ -70,7 +71,8 @@ def main(config):
         Base64Plugin(),
     #    GuessNumberPlugin(),
         JiraPlugin(),
-        UrlPlugin()
+        UrlPlugin(),
+        GithubPlugin(),
     ]
 
     for plugin in plugins:
