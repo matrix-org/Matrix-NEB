@@ -12,7 +12,8 @@ setup(
     license = "LICENSE",
     install_requires = [
         "pytumblr",
-        "requests"
+        "requests",
+        "Flask"
     ],
     dependency_links=[
         "git+ssh://git@github.com/tumblr/pytumblr.git",

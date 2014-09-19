@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-from neb.engine import Plugin, Command, KeyValueStore, ThreadedServer
+from neb.engine import Plugin, Command, KeyValueStore
 
-import BaseHTTPServer
+from flask import Flask
+from flask import request
+
 import json
+import threading
 
 import logging
 
@@ -43,9 +46,7 @@ class GithubPlugin(Plugin):
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
 
-        GithubWebServer.set_plugin(self)
-        self.server = ThreadedServer(GithubWebServer,
-                                     self.store.get("server_port"))
+        self.server = GithubWebServer(self, self.store.get("server_port"))
         self.server.daemon = True
         self.server.start()
 
@@ -85,6 +86,11 @@ class GithubPlugin(Plugin):
             projects = self.store.get("known_projects")
             projects.append(info["repo"])
             self.store.set("known_projects", projects)
+
+        # template:
+        # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
+        # 1<=3 of <branch name> <short hash> <full username>: <comment>
+
 
     def _show_projects(self, event, args):
         projects = self.store.get("known_projects")
@@ -162,46 +168,50 @@ class GithubPlugin(Plugin):
         print json.dumps(self.state, indent=4)
 
 
-class GithubWebServer(BaseHTTPServer.BaseHTTPRequestHandler):
+app = Flask("GithubWebServer")
 
-    @classmethod
-    def set_plugin(cls, plugin):
-        cls.plugin = plugin
 
-    @classmethod
-    def notify_plugin(cls, info):
-        cls.plugin.on_receive_github_push(info)
+class GithubWebServer(threading.Thread):
 
-    def do_POST(s):
-        log.debug("GithubWebServer: %s from %s", s.requestline,
-                  s.client_address)
+    def __init__(self, plugin, port):
+        super(GithubWebServer, self).__init__()
+        self.plugin = plugin
+        self.port = port
 
-        # template:
-        # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
-        # 1<=3 of <branch name> <short hash> <full username>: <comment>
+        app.add_url_rule('/', '/', self.do_POST, methods=["POST"])
 
-        if s.headers['Content-Type'].startswith("application/json"):
-            j = json.load(s.rfile)
-            log.debug("Content: %s", json.dumps(j, indent=4))
-            repo_name = j["repository"]["full_name"]
-            branch = j["ref"].split('/')[-1]
-            commit_msg = j["head_commit"]["message"]
-            commit_uname = j["head_commit"]["committer"]["username"]
-            commit_name = j["head_commit"]["committer"]["name"]
-            commit_link = j["head_commit"]["url"]
-            # short hash please
-            short_hash = commit_link.split('/')[-1][0:8]
-            commit_link = '/'.join(commit_link.split('/')[0:-1]) + "/" + short_hash
+    def notify_plugin(self, content):
+        self.plugin.on_receive_github_push(content)
 
-            GithubWebServer.notify_plugin({
-                "branch": branch,
-                "repo": repo_name,
-                "commit_msg": commit_msg,
-                "commit_username": commit_uname,
-                "commit_name": commit_name,
-                "commit_link": commit_link,
-                "commit_hash": short_hash
-            })
+    def run(self):
+        log.info("Running GithubWebServer")
+        app.run(host="0.0.0.0", port=self.port)
 
+    def do_POST(self):
+        log.debug("GithubWebServer: Incoming request from %s",
+                  request.remote_addr)
+
+        j = request.get_json()
+
+        repo_name = j["repository"]["full_name"]
+        branch = j["ref"].split('/')[-1]
+        commit_msg = j["head_commit"]["message"]
+        commit_uname = j["head_commit"]["committer"]["username"]
+        commit_name = j["head_commit"]["committer"]["name"]
+        commit_link = j["head_commit"]["url"]
+        # short hash please
+        short_hash = commit_link.split('/')[-1][0:8]
+        commit_link = '/'.join(commit_link.split('/')[0:-1]) + "/" + short_hash
+
+        self.notify_plugin({
+            "branch": branch,
+            "repo": repo_name,
+            "commit_msg": commit_msg,
+            "commit_username": commit_uname,
+            "commit_name": commit_name,
+            "commit_link": commit_link,
+            "commit_hash": short_hash
+        })
+        return ("", 200, {})
 
 
