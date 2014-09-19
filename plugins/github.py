@@ -167,7 +167,6 @@ class GithubPlugin(Plugin):
         return "github"
 
     def on_receive_webhook(self, data, ip, headers):
-        log.debug("data=%s ip=%s", data, ip)
         if self.store.get("secret_token"):
             token_sha1 = headers.get('X-Hub-Signature')
             payload_body = data
