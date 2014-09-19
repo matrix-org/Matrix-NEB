@@ -72,6 +72,10 @@ class GithubPlugin(Plugin):
             "clear-tracking": self._clear_tracking
         }
 
+        # TODO: make this configurable
+        if event["user_id"] not in self.matrix.config.admins:
+            return self._body("Sorry, only %s can do that." % json.dumps(self.matrix.config.admins))
+
         try:
             return actions[action](event, args)
         except KeyError:

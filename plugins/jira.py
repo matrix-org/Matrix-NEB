@@ -71,6 +71,10 @@ class JiraPlugin(Plugin):
             "clear-issues": self._clear_issues
         }
 
+        # TODO: make this configurable
+        if event["user_id"] not in self.matrix.config.admins:
+            return self._body("Sorry, only %s can do that." % json.dumps(self.matrix.config.admins))
+
         try:
             return actions[action](event, args)
         except KeyError:
