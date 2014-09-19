@@ -4,6 +4,7 @@ from neb.engine import Plugin, Command, KeyValueStore
 from flask import Flask
 from flask import request
 
+import hashlib
 import json
 import threading
 
@@ -42,11 +43,18 @@ class GithubPlugin(Plugin):
         if not self.store.has("server_port"):
             self.store.set("server_port", 8500)
 
+        if not self.store.has("secret_token"):
+            self.store.set("secret_token", "")
+
         self.state = {
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
 
-        self.server = GithubWebServer(self, self.store.get("server_port"))
+        self.server = GithubWebServer(
+            self,
+            self.store.get("server_port"),
+            self.store.get("secret_token")
+        )
         self.server.daemon = True
         self.server.start()
 
@@ -197,10 +205,11 @@ app = Flask("GithubWebServer")
 
 class GithubWebServer(threading.Thread):
 
-    def __init__(self, plugin, port):
+    def __init__(self, plugin, port, token=None):
         super(GithubWebServer, self).__init__()
         self.plugin = plugin
         self.port = port
+        self.secret_token = token
 
         app.add_url_rule('/neb/github', '/neb/github', self.do_POST, methods=["POST"])
 
@@ -214,6 +223,14 @@ class GithubWebServer(threading.Thread):
     def do_POST(self):
         log.debug("GithubWebServer: Incoming request from %s",
                   request.remote_addr)
+
+        if self.secret_token:
+            token_sha1 = request.headers.get('X-Hub-Signature')
+            calc_sha1 = hashlib.sha1("sha1=" + self.secret_token).hexdigest()
+            if token_sha1 != calc_sha1:
+                log.warn("GithubWebServer: FAILED SECRET TOKEN AUTH. IP=%s",
+                         request.remote_addr)
+                return ("", 403, {})
 
         j = request.get_json()
 
