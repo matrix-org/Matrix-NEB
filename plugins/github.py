@@ -229,15 +229,13 @@ class GithubWebServer(threading.Thread):
 
         if self.secret_token:
             token_sha1 = request.headers.get('X-Hub-Signature')
-            payload_body = json.dumps(j)
-            calc = hmac.new(self.secret_token, payload_body, sha1)
+            payload_body = request.data
+            calc = hmac.new(str(self.secret_token), payload_body, sha1)
             calc_sha1 = "sha1=" + calc.hexdigest()
             if token_sha1 != calc_sha1:
                 log.warn("GithubWebServer: FAILED SECRET TOKEN AUTH. IP=%s",
                          request.remote_addr)
                 return ("", 403, {})
-
-
 
         repo_name = j["repository"]["full_name"]
         branch = j["ref"].split('/')[-1]
