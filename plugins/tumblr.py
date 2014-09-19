@@ -18,11 +18,11 @@ class TumblrPlugin(Plugin):
     """ Plugin for trawling Tumblr's API.
 
     New events:
-      Type: neb.plugin.tumblr.username
+      Type: org.matrix.neb.plugin.tumblr.username
       State: Yes
       Content: { username: foo }
 
-      Type: neb.plugin.tumblr.position
+      Type: org.matrix.neb.plugin.tumblr.position
       State: Yes
       Content: { unixts: 1234 }
     """
@@ -108,9 +108,9 @@ class TumblrPlugin(Plugin):
             position = None
             try:
                 for state in room["state"]:
-                    if state["type"] == "neb.plugin.tumblr.username":
+                    if state["type"] == "org.matrix.neb.plugin.tumblr.username":
                         username = state["content"]["username"]
-                    elif state["type"] == "neb.plugin.tumblr.position":
+                    elif state["type"] == "org.matrix.neb.plugin.tumblr.position":
                         position = state["content"]["unixts"]
             except KeyError:
                 log.warn("No state info found for %s", room_id)
@@ -166,7 +166,7 @@ class TumblrPlugin(Plugin):
         log.debug("Invited %s to room %s. Reason: They issued a follow.", user, room_id)
 
         # setup state in room
-        self.matrix.send_event(room_id, "neb.plugin.tumblr.username", {
+        self.matrix.send_event(room_id, "org.matrix.neb.plugin.tumblr.username", {
             "username": username
         }, state=True)
         self.update_pos(room_id, 0)
@@ -208,7 +208,7 @@ class TumblrPlugin(Plugin):
         return responses
 
     def update_pos(self, room_id, pos):
-        self.matrix.send_event(room_id, "neb.plugin.tumblr.position", {
+        self.matrix.send_event(room_id, "org.matrix.neb.plugin.tumblr.position", {
             "unixts": pos
         }, state=True)
 

@@ -15,7 +15,7 @@ class JiraPlugin(Plugin):
     """ Plugin for interacting with JIRA.
 
     New events:
-        Type: neb.plugin.jira.issues.display
+        Type: org.matrix.neb.plugin.jira.issues.display
         State: Yes
         Content: {
             display: [projectKey1, projectKey2, ...]
@@ -83,7 +83,7 @@ class JiraPlugin(Plugin):
     def _clear_issues(self, event, args):
         self.matrix.send_event(
             event["room_id"],
-            "neb.plugin.jira.issues.display",
+            "org.matrix.neb.plugin.jira.issues.display",
             {
                 "display": []
             },
@@ -120,7 +120,7 @@ class JiraPlugin(Plugin):
     def _send_display_event(self, room_id, project_keys):
         self.matrix.send_event(
             room_id,
-            "neb.plugin.jira.issues.display",
+            "org.matrix.neb.plugin.jira.issues.display",
             {
                 "display": project_keys
             },
@@ -162,7 +162,7 @@ class JiraPlugin(Plugin):
                     log.exception(e)
 
     def on_event(self, event, event_type):
-        if event_type == "neb.plugin.jira.issues.display":
+        if event_type == "org.matrix.neb.plugin.jira.issues.display":
             self._set_display_event(event)
 
     def on_receive_jira_push(self, info):
@@ -193,7 +193,7 @@ class JiraPlugin(Plugin):
 
             try:
                 for state in room["state"]:
-                    if state["type"] == "neb.plugin.jira.issues.display":
+                    if state["type"] == "org.matrix.neb.plugin.jira.issues.display":
                         self._set_display_event(state)
             except KeyError:
                 pass

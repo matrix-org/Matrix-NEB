@@ -16,7 +16,7 @@ class GithubPlugin(Plugin):
     """ Plugin for interacting with Github. Supports webhooks.
 
     New events:
-        Type: neb.plugin.github.projects.tracking
+        Type: org.matrix.neb.plugin.github.projects.tracking
         State: Yes
         Content: {
             projects: [projectName1, projectName2, ...]
@@ -147,7 +147,7 @@ class GithubPlugin(Plugin):
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_event(
             room_id,
-            "neb.plugin.github.projects.tracking",
+            "org.matrix.neb.plugin.github.projects.tracking",
             {
                 "projects": project_names
             },
@@ -167,7 +167,7 @@ class GithubPlugin(Plugin):
             self.state[room_id]["projects"] = []
 
     def on_event(self, event, event_type):
-        if event_type == "neb.plugin.github.projects.tracking":
+        if event_type == "org.matrix.neb.plugin.github.projects.tracking":
             self._set_track_event(event)
 
     def sync(self, matrix, sync):
@@ -183,7 +183,7 @@ class GithubPlugin(Plugin):
 
             try:
                 for state in room["state"]:
-                    if state["type"] == "neb.plugin.github.projects.tracking":
+                    if state["type"] == "org.matrix.neb.plugin.github.projects.tracking":
                         self._set_track_event(state)
             except KeyError:
                 pass
