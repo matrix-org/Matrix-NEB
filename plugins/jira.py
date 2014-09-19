@@ -113,7 +113,7 @@ class JiraPlugin(Plugin):
 
         url = self.store.get("url")
         return self._body(
-            "Issues for projects %s from %s will be displayed as they are mentioned." % (project_keys, url)
+            "Issues for projects %s from %s will be displayed as they are mentioned/edited." % (project_keys, url)
         )
 
     def _send_display_event(self, room_id, project_keys):
@@ -166,6 +166,18 @@ class JiraPlugin(Plugin):
 
     def on_receive_jira_push(self, info):
         log.debug("on_recv %s", info)
+        project = self.regex.match(info["key"]).groups()[1]
+
+        # form the message
+        push_message = "%s %s %s - %s" % (info["user"], info["action"], info["key"], info["summary"])
+
+        # send messages to all rooms registered with this project.
+        for (room_id, room_info) in self.state.iteritems():
+            try:
+                if project in room_info["display"]:
+                    self.matrix.send_message(room_id, self._body(push_message))
+            except KeyError:
+                pass
 
     def _set_display_event(self, event):
         room_id = event["room_id"]
@@ -227,7 +239,6 @@ class JiraPlugin(Plugin):
         return "jira"
 
     def on_receive_webhook(self, data, ip, headers):
-        log.debug("webhook: data=%s ip=%s", data, ip)
         j = json.loads(data)
 
         info = self.get_webhook_json_keys(j)
@@ -241,11 +252,11 @@ class JiraPlugin(Plugin):
         action = ""
 
         if j['webhookEvent'] == "jira:issue_updated":
-            action = "update"
+            action = "updated"
         elif j['webhookEvent'] == "jira:issue_deleted":
-            action = "delete"
+            action = "deleted"
         elif j['webhookEvent'] == "jira:issue_created":
-            action = "create"
+            action = "created"
 
         return {
             "key": key,
@@ -255,7 +266,7 @@ class JiraPlugin(Plugin):
             "action": action
         }
 
-    def get_webhook_summary(j):
+    def get_webhook_summary(self, j):
         summary = j['issue']['fields']['summary']
         priority = j['issue']['fields']['priority']['name']
         status = j['issue']['fields']['status']['name']
