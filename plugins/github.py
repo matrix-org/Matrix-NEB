@@ -79,6 +79,13 @@ class GithubPlugin(Plugin):
     def on_receive_github_push(self, info):
         log.info("recv %s", info)
 
+        # add the project if we didn't know about it before
+        if info["repo"] not in self.store.get("known_projects"):
+            log.info("Added new repo: %s", info["repo"])
+            projects = self.store.get("known_projects")
+            projects.append(info["repo"])
+            self.store.set("known_projects", projects)
+
     def _show_projects(self, event, args):
         projects = self.store.get("known_projects")
         return [
@@ -161,22 +168,40 @@ class GithubWebServer(BaseHTTPServer.BaseHTTPRequestHandler):
     def set_plugin(cls, plugin):
         cls.plugin = plugin
 
-    def get_json_keys(j):
-        return {
-            "foo": "bar"
-        }
+    @classmethod
+    def notify_plugin(cls, info):
+        cls.plugin.on_receive_github_push(info)
 
     def do_POST(s):
         log.debug("GithubWebServer: %s from %s", s.requestline,
                   s.client_address)
 
+        # template:
+        # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
+        # 1<=3 of <branch name> <short hash> <full username>: <comment>
+
         if s.headers['Content-Type'].startswith("application/json"):
             j = json.load(s.rfile)
-            log.debug("Content: %s", j)
+            log.debug("Content: %s", json.dumps(j, indent=4))
+            repo_name = j["repository"]["full_name"]
+            branch = j["ref"].split('/')[-1]
+            commit_msg = j["head_commit"]["message"]
+            commit_uname = j["head_commit"]["committer"]["username"]
+            commit_name = j["head_commit"]["committer"]["name"]
+            commit_link = j["head_commit"]["url"]
+            # short hash please
+            short_hash = commit_link.split('/')[-1][0:8]
+            commit_link = '/'.join(commit_link.split('/')[0:-1]) + "/" + short_hash
 
-        s.send_response(200)
-        s.send_header("Content-Length", 0)
-        s.end_headers()
+            GithubWebServer.notify_plugin({
+                "branch": branch,
+                "repo": repo_name,
+                "commit_msg": commit_msg,
+                "commit_username": commit_uname,
+                "commit_name": commit_name,
+                "commit_link": commit_link,
+                "commit_hash": short_hash
+            })
 
 
 
