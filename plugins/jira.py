@@ -169,7 +169,9 @@ class JiraPlugin(Plugin):
         project = self.regex.match(info["key"]).groups()[1]
 
         # form the message
-        push_message = "%s %s %s - %s" % (info["user"], info["action"], info["key"], info["summary"])
+        link = "%s/browse/%s" % (self.store.get("url"), info["key"])
+        push_message = "%s %s %s - %s %s" % (info["user"], info["action"],
+                       info["key"], info["summary"], link)
 
         # send messages to all rooms registered with this project.
         for (room_id, room_info) in self.state.iteritems():
