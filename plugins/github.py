@@ -1,10 +1,30 @@
 # -*- coding: utf-8 -*-
 from neb.engine import Plugin, Command, KeyValueStore
 
+import BaseHTTPServer
 import json
+import threading
+import urllib
+import urllib2
 
+import logging
+
+log = logging.getLogger(name=__name__)
 
 class GithubPlugin(Plugin):
+    """ Plugin for interacting with Github. Supports webhooks.
+
+    New events:
+        Type: neb.plugin.github.projects.tracking
+        State: Yes
+        Content: {
+            projects: [projectName1, projectName2, ...]
+        }
+
+    Background operations:
+        Listens on port 8500 (default; configurable in github.json) for incoming
+        requests from github.
+    """
 
     HELP = [
         "show-projects :: Display which projects this bot has been configured with.",
@@ -18,9 +38,16 @@ class GithubPlugin(Plugin):
         if not self.store.has("known_projects"):
             self.store.set("known_projects", ["FOO", "BAR"])
 
+        if not self.store.has("server_port"):
+            self.store.set("server_port", 8500)
+
         self.state = {
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
+
+        self.server = ThreadedServer(GithubWebServer, self.store.get("server_port"))
+        self.server.daemon = True
+        self.server.start()
 
     def get_commands(self):
         """Return human readable commands with descriptions.
@@ -123,3 +150,25 @@ class GithubPlugin(Plugin):
         print "Plugin: GitHub Sync state:"
         print json.dumps(self.state, indent=4)
 
+
+class GithubWebServer(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    def do_POST(s):
+        log.debug("GithubWebServer: %s from %s", s.requestline, s.client_address)
+
+        s.send_response(200)
+        s.send_header("Content-Length", 0)
+        s.end_headers()
+
+
+class ThreadedServer(threading.Thread):
+
+    def __init__(self, http_server_cls, port):
+        super(ThreadedServer, self).__init__()
+        self.port = port
+        self.server_cls = http_server_cls
+
+    def run(self):
+        server_address = ('', self.port)
+        httpd = BaseHTTPServer.HTTPServer(server_address, self.server_cls)
+        httpd.serve_forever()
