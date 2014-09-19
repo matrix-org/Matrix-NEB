@@ -37,7 +37,7 @@ class GithubPlugin(Plugin):
         self.store = KeyValueStore(config)
 
         if not self.store.has("known_projects"):
-            self.store.set("known_projects", ["FOO", "BAR"])
+            self.store.set("known_projects", [])
 
         if not self.store.has("server_port"):
             self.store.set("server_port", 8500)
