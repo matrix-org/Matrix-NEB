@@ -1,6 +1,5 @@
-# NEB related
-tumblr.json
-neb.json
+# NEB/plugin related config files
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
