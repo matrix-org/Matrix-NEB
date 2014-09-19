@@ -202,7 +202,7 @@ class GithubWebServer(threading.Thread):
         self.plugin = plugin
         self.port = port
 
-        app.add_url_rule('/', '/', self.do_POST, methods=["POST"])
+        app.add_url_rule('/neb/github', '/neb/github', self.do_POST, methods=["POST"])
 
     def notify_plugin(self, content):
         self.plugin.on_receive_github_push(content)
