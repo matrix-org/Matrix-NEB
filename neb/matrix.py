@@ -7,6 +7,7 @@ import urllib2
 from urllib2 import Request
 
 from neb import NebError
+from neb.webhook import NebHookServer
 
 import logging
 
@@ -142,10 +143,18 @@ class Matrix(object):
             self.cmds[cmd.cmd] = cmd
 
     def setup(self):
+        self.webhook = NebHookServer(8500)
+        self.webhook.daemon = True
+        self.webhook.start()
+
         sync = self.initial_sync()
         log.debug("Notifying plugins of initial sync results")
         for plugin in self.plugins:
             plugin.sync(self, sync)
+
+            # see if this plugin needs a webhook
+            if plugin.get_webhook_key():
+                self.webhook.set_plugin(plugin.get_webhook_key(), plugin)
 
     def _help(self):
         msgs = []

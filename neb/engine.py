@@ -29,6 +29,24 @@ class Plugin(object):
         """
         return []
 
+    def get_webhook_key(self):
+        """ Return the path to receive webhook events, or nothing if you don't
+        require a webhook."""
+        pass
+
+    def on_receive_webhook(self, data, ip, headers):
+        """Someone hit your webhook.
+
+        Args:
+            data(str): The request body
+            ip(str): The source IP address
+            headers: A dict of headers (via .get("headername"))
+        Returns:
+            A tuple of (response_body, http_status_code, header_dict) or None
+            to return a 200 OK. Raise an exception to return a 500.
+        """
+        pass
+
     def sync(self, matrix, initial_sync):
         """Configure yourself from the initial sync and use the given matrix for requests.
 
@@ -84,16 +102,3 @@ class KeyValueStore(object):
 
     def get(self, key):
         return self.config[key]
-
-
-class ThreadedServer(threading.Thread):
-
-    def __init__(self, http_server_cls, port):
-        super(ThreadedServer, self).__init__()
-        self.port = port
-        self.server_cls = http_server_cls
-
-    def run(self):
-        server_address = ('', self.port)
-        httpd = BaseHTTPServer.HTTPServer(server_address, self.server_cls)
-        httpd.serve_forever()

@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 from neb.engine import Plugin, Command, KeyValueStore
 
-from flask import Flask
-from flask import request
-
 from hashlib import sha1
 import hmac
 import json
-import threading
 
 import logging
 
@@ -24,9 +20,8 @@ class GithubPlugin(Plugin):
             projects: [projectName1, projectName2, ...]
         }
 
-    Background operations:
-        Listens on port 8500 (default; configurable in github.json) for incoming
-        requests from github.
+    Webhooks:
+        /neb/github
     """
 
     HELP = [
@@ -41,23 +36,12 @@ class GithubPlugin(Plugin):
         if not self.store.has("known_projects"):
             self.store.set("known_projects", [])
 
-        if not self.store.has("server_port"):
-            self.store.set("server_port", 8500)
-
         if not self.store.has("secret_token"):
             self.store.set("secret_token", "")
 
         self.state = {
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
-
-        self.server = GithubWebServer(
-            self,
-            self.store.get("server_port"),
-            self.store.get("secret_token")
-        )
-        self.server.daemon = True
-        self.server.start()
 
     def get_commands(self):
         """Return human readable commands with descriptions.
@@ -179,6 +163,50 @@ class GithubPlugin(Plugin):
         if event_type == "org.matrix.neb.plugin.github.projects.tracking":
             self._set_track_event(event)
 
+    def get_webhook_key(self):
+        return "github"
+
+    def on_receive_webhook(self, data, ip, headers):
+        log.debug("data=%s ip=%s", data, ip)
+        if self.store.get("secret_token"):
+            token_sha1 = headers.get('X-Hub-Signature')
+            payload_body = data
+            calc = hmac.new(str(self.store.get("secret_token")), payload_body,
+                            sha1)
+            calc_sha1 = "sha1=" + calc.hexdigest()
+            if token_sha1 != calc_sha1:
+                log.warn("GithubWebServer: FAILED SECRET TOKEN AUTH. IP=%s",
+                         ip)
+                return ("", 403, {})
+
+        j = json.loads(data)
+        repo_name = j["repository"]["full_name"]
+        branch = j["ref"].split('/')[-1]
+        commit_msg = j["head_commit"]["message"]
+        commit_name = j["head_commit"]["committer"]["name"]
+
+        commit_uname = None
+        try:
+            commit_uname = j["head_commit"]["committer"]["username"]
+        except KeyError:
+            # possible if they haven't tied up with a github account
+            commit_uname = commit_name
+
+        commit_link = j["head_commit"]["url"]
+        # short hash please
+        short_hash = commit_link.split('/')[-1][0:8]
+        commit_link = '/'.join(commit_link.split('/')[0:-1]) + "/" + short_hash
+
+        self.on_receive_github_push({
+            "branch": branch,
+            "repo": repo_name,
+            "commit_msg": commit_msg,
+            "commit_username": commit_uname,
+            "commit_name": commit_name,
+            "commit_link": commit_link,
+            "commit_hash": short_hash
+        })
+
     def sync(self, matrix, sync):
         self.matrix = matrix
 
@@ -199,70 +227,5 @@ class GithubPlugin(Plugin):
 
         print "Plugin: GitHub Sync state:"
         print json.dumps(self.state, indent=4)
-
-
-app = Flask("GithubWebServer")
-
-
-class GithubWebServer(threading.Thread):
-
-    def __init__(self, plugin, port, token=None):
-        super(GithubWebServer, self).__init__()
-        self.plugin = plugin
-        self.port = port
-        self.secret_token = token
-
-        app.add_url_rule('/neb/github', '/neb/github', self.do_POST, methods=["POST"])
-
-    def notify_plugin(self, content):
-        self.plugin.on_receive_github_push(content)
-
-    def run(self):
-        log.info("Running GithubWebServer")
-        app.run(host="0.0.0.0", port=self.port)
-
-    def do_POST(self):
-        log.debug("GithubWebServer: Incoming request from %s",
-                  request.remote_addr)
-
-        j = request.get_json()
-
-        if self.secret_token:
-            token_sha1 = request.headers.get('X-Hub-Signature')
-            payload_body = request.data
-            calc = hmac.new(str(self.secret_token), payload_body, sha1)
-            calc_sha1 = "sha1=" + calc.hexdigest()
-            if token_sha1 != calc_sha1:
-                log.warn("GithubWebServer: FAILED SECRET TOKEN AUTH. IP=%s",
-                         request.remote_addr)
-                return ("", 403, {})
-
-        repo_name = j["repository"]["full_name"]
-        branch = j["ref"].split('/')[-1]
-        commit_msg = j["head_commit"]["message"]
-        commit_name = j["head_commit"]["committer"]["name"]
-
-        commit_uname = None
-        try:
-            commit_uname = j["head_commit"]["committer"]["username"]
-        except KeyError:
-            # possible if they haven't tied up with a github account
-            commit_uname = commit_name
-
-        commit_link = j["head_commit"]["url"]
-        # short hash please
-        short_hash = commit_link.split('/')[-1][0:8]
-        commit_link = '/'.join(commit_link.split('/')[0:-1]) + "/" + short_hash
-
-        self.notify_plugin({
-            "branch": branch,
-            "repo": repo_name,
-            "commit_msg": commit_msg,
-            "commit_username": commit_uname,
-            "commit_name": commit_name,
-            "commit_link": commit_link,
-            "commit_hash": short_hash
-        })
-        return ("", 200, {})
 
 
