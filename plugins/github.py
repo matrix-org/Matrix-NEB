@@ -87,10 +87,26 @@ class GithubPlugin(Plugin):
             projects.append(info["repo"])
             self.store.set("known_projects", projects)
 
-        # template:
+
+
+        # form the template:
         # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
         # 1<=3 of <branch name> <short hash> <full username>: <comment>
+        push_message = "[%s] %s pushed to %s: %s  - %s" % (
+            info["repo"],
+            info["commit_username"],
+            info["branch"],
+            info["commit_msg"],
+            info["commit_link"]
+        )
 
+        # send messages to all rooms registered with this project.
+        for (room_id, room_info) in self.state.iteritems():
+            try:
+                if info["repo"] in room_info["projects"]:
+                    self.matrix.send_message(room_id, self._body(push_message))
+            except KeyError:
+                pass
 
     def _show_projects(self, event, args):
         projects = self.store.get("known_projects")
@@ -99,7 +115,7 @@ class GithubPlugin(Plugin):
         ]
 
     def _track_projects(self, event, args):
-        project_names_csv = ' '.join(args[2:]).upper().strip()
+        project_names_csv = ' '.join(args[2:]).strip()
         project_names = [a.strip() for a in project_names_csv.split(',')]
         if not project_names_csv:
             try:
@@ -145,6 +161,10 @@ class GithubPlugin(Plugin):
             self.state[room_id]["projects"] = projects
         else:
             self.state[room_id]["projects"] = []
+
+    def on_event(self, event, event_type):
+        if event_type == "neb.plugin.github.projects.tracking":
+            self._set_track_event(event)
 
     def sync(self, matrix, sync):
         self.matrix = matrix
