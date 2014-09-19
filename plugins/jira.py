@@ -5,6 +5,7 @@ import json
 import re
 import requests
 
+import BaseHTTPServer
 import logging
 
 log = logging.getLogger(name=__name__)
@@ -160,6 +161,9 @@ class JiraPlugin(Plugin):
         if event_type == "neb.plugin.jira.issues.display":
             self._set_display_event(event)
 
+    def on_receive_jira_push(self, info):
+        log.debug("on_recv %s", info)
+
     def _set_display_event(self, event):
         room_id = event["room_id"]
         issues = event["content"]["display"]
@@ -217,3 +221,70 @@ class JiraPlugin(Plugin):
         return self.store.get("url") + path
 
 
+class JiraWebServer(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    @classmethod
+    def set_plugin(cls, plugin):
+        cls.plugin = plugin
+
+    @classmethod
+    def on_updated(cls, j):
+        info = JiraWebServer.get_json_keys(j)
+        info["action"] = "update"
+        cls.plugin.on_receive_jira_push(info)
+
+    @classmethod
+    def on_deleted(cls, j):
+        info = JiraWebServer.get_json_keys(j)
+        info["action"] = "delete"
+        cls.plugin.on_receive_jira_push(info)
+
+    @classmethod
+    def on_created(cls, j):
+        info = JiraWebServer.get_json_keys(j)
+        info["action"] = "create"
+        cls.plugin.on_receive_jira_push(info)
+
+    def get_json_keys(j):
+        key = j['issue']['key']
+        user = j['user']['name']
+        self_key = json['issue']['self']
+        summary = JiraWebServer.get_summary(j)
+
+        return {
+            "key": key,
+            "user": user,
+            "summary": summary,
+            "self": self_key
+        }
+
+    def get_summary(j):
+        summary = j['issue']['fields']['summary']
+        priority = j['issue']['fields']['priority']['name']
+        status = j['issue']['fields']['status']['name']
+
+        if "resolution" in j['issue']['fields'] \
+            and j['issue']['fields']['resolution'] is not None:
+            status = "%s (%s)" \
+                % (status, j['issue']['fields']['resolution']['name'])
+
+        return "%s [%s, %s]" \
+            % (summary, priority, status)
+
+    def do_POST(s):
+        log.debug("JiraWebServer: %s from %s", s.requestline,
+                  s.client_address)
+
+        if s.headers['Content-Type'].startswith("application/json"):
+            j = json.load(s.rfile)
+
+            if j['webhookEvent'] == "jira:issue_updated":
+                JiraWebServer.on_updated(j)
+            elif j['webhookEvent'] == "jira:issue_deleted":
+                JiraWebServer.on_deleted(j)
+            elif j['webhookEvent'] == "jira:issue_created":
+                JiraWebServer.on_created(j)
+
+        s.send_response(200)
+        s.send_header("Content-Length", 0)
+        s.end_headers()

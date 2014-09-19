@@ -2,7 +2,9 @@
 from collections import namedtuple
 from . import NebError
 
+import BaseHTTPServer
 import json
+import threading
 import urllib
 
 # Native.Extraction.Bot
@@ -82,3 +84,16 @@ class KeyValueStore(object):
 
     def get(self, key):
         return self.config[key]
+
+
+class ThreadedServer(threading.Thread):
+
+    def __init__(self, http_server_cls, port):
+        super(ThreadedServer, self).__init__()
+        self.port = port
+        self.server_cls = http_server_cls
+
+    def run(self):
+        server_address = ('', self.port)
+        httpd = BaseHTTPServer.HTTPServer(server_address, self.server_cls)
+        httpd.serve_forever()

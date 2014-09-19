@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
-from neb.engine import Plugin, Command, KeyValueStore
+from neb.engine import Plugin, Command, KeyValueStore, ThreadedServer
 
 import BaseHTTPServer
 import json
-import threading
-import urllib
-import urllib2
 
 import logging
 
 log = logging.getLogger(name=__name__)
+
 
 class GithubPlugin(Plugin):
     """ Plugin for interacting with Github. Supports webhooks.
@@ -45,7 +43,9 @@ class GithubPlugin(Plugin):
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
 
-        self.server = ThreadedServer(GithubWebServer, self.store.get("server_port"))
+        GithubWebServer.set_plugin(self)
+        self.server = ThreadedServer(GithubWebServer,
+                                     self.store.get("server_port"))
         self.server.daemon = True
         self.server.start()
 
@@ -76,6 +76,9 @@ class GithubPlugin(Plugin):
         except KeyError:
             return self._body("Unknown Github action: %s" % action)
 
+    def on_receive_github_push(self, info):
+        log.info("recv %s", info)
+
     def _show_projects(self, event, args):
         projects = self.store.get("known_projects")
         return [
@@ -87,7 +90,8 @@ class GithubPlugin(Plugin):
         project_names = [a.strip() for a in project_names_csv.split(',')]
         if not project_names_csv:
             try:
-                return self._body("Currently tracking %s" % json.dumps(self.state[event["room_id"]]["projects"]))
+                return self._body("Currently tracking %s" %
+                json.dumps(self.state[event["room_id"]]["projects"]))
             except KeyError:
                 return self._body("Not tracking any projects currently.")
 
@@ -153,22 +157,26 @@ class GithubPlugin(Plugin):
 
 class GithubWebServer(BaseHTTPServer.BaseHTTPRequestHandler):
 
+    @classmethod
+    def set_plugin(cls, plugin):
+        cls.plugin = plugin
+
+    def get_json_keys(j):
+        return {
+            "foo": "bar"
+        }
+
     def do_POST(s):
-        log.debug("GithubWebServer: %s from %s", s.requestline, s.client_address)
+        log.debug("GithubWebServer: %s from %s", s.requestline,
+                  s.client_address)
+
+        if s.headers['Content-Type'].startswith("application/json"):
+            j = json.load(s.rfile)
+            log.debug("Content: %s", j)
 
         s.send_response(200)
         s.send_header("Content-Length", 0)
         s.end_headers()
 
 
-class ThreadedServer(threading.Thread):
 
-    def __init__(self, http_server_cls, port):
-        super(ThreadedServer, self).__init__()
-        self.port = port
-        self.server_cls = http_server_cls
-
-    def run(self):
-        server_address = ('', self.port)
-        httpd = BaseHTTPServer.HTTPServer(server_address, self.server_cls)
-        httpd.serve_forever()
