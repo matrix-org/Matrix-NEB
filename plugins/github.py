@@ -216,8 +216,15 @@ class GithubWebServer(threading.Thread):
         repo_name = j["repository"]["full_name"]
         branch = j["ref"].split('/')[-1]
         commit_msg = j["head_commit"]["message"]
-        commit_uname = j["head_commit"]["committer"]["username"]
         commit_name = j["head_commit"]["committer"]["name"]
+
+        commit_uname = None
+        try:
+            commit_uname = j["head_commit"]["committer"]["username"]
+        except KeyError:
+            # possible if they haven't tied up with a github account
+            commit_uname = commit_name
+
         commit_link = j["head_commit"]["url"]
         # short hash please
         short_hash = commit_link.split('/')[-1][0:8]
