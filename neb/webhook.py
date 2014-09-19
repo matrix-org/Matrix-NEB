@@ -22,7 +22,7 @@ class NebHookServer(threading.Thread):
         #    plugin_key : plugin_instance
         }
 
-        app.add_url_rule('/neb/<service>', '/neb/<service>',
+        app.add_url_rule('/neb/<path:service>', '/neb/<path:service>',
                          self.do_POST, methods=["POST"])
 
     def set_plugin(self, key, plugin):
@@ -32,10 +32,10 @@ class NebHookServer(threading.Thread):
     def do_POST(self, service=""):
         log.debug("NebHookServer: Plugin=%s : Incoming request from %s",
                   service, request.remote_addr)
-        if service not in self.plugin_mappings:
+        if service.split("/")[0] not in self.plugin_mappings:
             return ("", 404, {})
 
-        plugin = self.plugin_mappings[service]
+        plugin = self.plugin_mappings[service.split("/")[0]]
 
         try:
             # tuple (body, status_code, headers)
