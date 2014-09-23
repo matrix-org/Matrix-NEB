@@ -13,6 +13,7 @@ from plugins.github import GithubPlugin
 
 import logging
 import sys
+import time
 
 logging.basicConfig(level=6)
 log = logging.getLogger(name=__name__)
@@ -80,12 +81,13 @@ def main(config):
 
     matrix.setup()
 
-    try:
-        log.info("Listening for incoming events.")
-        matrix.event_loop()
-
-    except Exception as e:
-        log.error("Ruh roh: %s", e)
+    while True:
+        try:
+            log.info("Listening for incoming events.")
+            matrix.event_loop()
+        except Exception as e:
+            log.error("Ruh roh: %s", e)
+        time.sleep(5)    
 
     log.info("Terminating.")
 
