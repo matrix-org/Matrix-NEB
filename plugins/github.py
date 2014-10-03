@@ -207,7 +207,25 @@ class GithubPlugin(Plugin):
         self.send_message_to_repos(repo_name, msg)
 
     def on_receive_issue(self, data):
-        pass
+        action = data["action"]
+        repo_name = data["repository"]["full_name"]
+        issue = data["issue"]
+        title = issue["title"]
+        issue_num = issue["number"]
+        url = issue["html_url"]
+        
+        user = data["sender"]["login"]
+
+        msg = "[%s] %s %s issue #%s: %s - %s" % (
+            repo_name,
+            user,
+            action,
+            issue_num,
+            title,
+            url
+        )
+
+        self.send_message_to_repos(repo_name, msg)
 
 
     def on_receive_webhook(self, data, ip, headers):
