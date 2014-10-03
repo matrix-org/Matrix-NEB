@@ -196,6 +196,7 @@ class GithubPlugin(Plugin):
         commit_msg = ""
         commit_name = ""
         commit_link = ""
+        short_hash = ""
         push_type = "commit"
 
         if j["head_commit"]:
