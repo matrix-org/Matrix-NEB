@@ -215,6 +215,23 @@ class GithubPlugin(Plugin):
         url = issue["html_url"]
         
         user = data["sender"]["login"]
+        
+        if action == "assigned":
+            try:
+                assignee = data["assignee"]["login"]
+                msg = "[%s] %s assigned issue #%s to %s: %s - %s" % (
+                    repo_name,
+                    user,
+                    issue_num,
+                    assignee,
+                    title,
+                    url
+                )
+                self.send_message_to_repos(repo_name, msg)
+                return
+            except:
+                pass
+
 
         msg = "[%s] %s %s issue #%s: %s - %s" % (
             repo_name,
