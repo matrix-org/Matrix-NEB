@@ -213,7 +213,7 @@ class GithubPlugin(Plugin):
         commit_uname = None
         try:
             commit_uname = j["head_commit"]["committer"]["username"]
-        except KeyError:
+        except Exception:
             # possible if they haven't tied up with a github account
             commit_uname = commit_name
 
