@@ -180,7 +180,8 @@ class GithubPlugin(Plugin):
 
         j = json.loads(data)
         repo_name = j["repository"]["full_name"]
-        branch = '/'.join(j["ref"].split('/')[1:])  # skip stuff before first /
+        # strip 'refs/heads' from 'refs/heads/branch_name'
+        branch = '/'.join(j["ref"].split('/')[2:])
         commit_msg = j["head_commit"]["message"]
         commit_name = j["head_commit"]["committer"]["name"]
 
