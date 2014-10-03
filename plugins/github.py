@@ -107,10 +107,13 @@ class GithubPlugin(Plugin):
             log.warn("Unknown push type. %s", info["type"])
             return
 
+        self.send_message_to_repos(info["repo"], push_message)
+
+    def send_message_to_repos(self, repo, push_message):
         # send messages to all rooms registered with this project.
         for (room_id, room_info) in self.state.iteritems():
             try:
-                if info["repo"] in room_info["projects"]:
+                if repo in room_info["projects"]:
                     self.matrix.send_message(room_id, self._body(push_message))
             except KeyError:
                 pass
@@ -176,6 +179,37 @@ class GithubPlugin(Plugin):
     def get_webhook_key(self):
         return "github"
 
+    def on_receive_pull_request(self, data):
+        action = data["action"]
+        pull_req_num = data["number"]
+        repo_name = data["repository"]["full_name"]
+        pr = data["pull_request"]
+        pr_url = pr["html_url"]
+        pr_state = pr["state"]
+        pr_title = pr["title"]
+
+        user = ""
+        try:
+            user = pr["head"]["user"]["login"]
+        except:
+            user = data["sender"]["login"]
+        
+        msg = "[%s] %s %s pull request #%s: %s [%s] - %s" % (
+            repo_name,
+            user,
+            action,
+            pull_req_num,
+            pr_title,
+            pr_state,
+            pr_url
+        )
+
+        self.send_message_to_repos(repo_name, msg)
+
+    def on_receive_issue(self, data):
+        pass
+
+
     def on_receive_webhook(self, data, ip, headers):
         if self.store.get("secret_token"):
             token_sha1 = headers.get('X-Hub-Signature')
@@ -187,6 +221,14 @@ class GithubPlugin(Plugin):
                 log.warn("GithubWebServer: FAILED SECRET TOKEN AUTH. IP=%s",
                          ip)
                 return ("", 403, {})
+
+        event_type = headers.get('X-GitHub-Event')
+        if event_type == "pull_request":
+            self.on_receive_pull_request(json.loads(data))
+            return
+        elif event_type == "issues":
+            self.on_receive_issue(json.loads(data))
+            return
 
         j = json.loads(data)
         repo_name = j["repository"]["full_name"]
