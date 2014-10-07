@@ -188,11 +188,7 @@ class GithubPlugin(Plugin):
         pr_state = pr["state"]
         pr_title = pr["title"]
 
-        user = ""
-        try:
-            user = pr["head"]["user"]["login"]
-        except:
-            user = data["sender"]["login"]
+        user = data["sender"]["login"]
         
         msg = "[%s] %s %s pull request #%s: %s [%s] - %s" % (
             repo_name,
