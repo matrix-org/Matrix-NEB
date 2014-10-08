@@ -159,5 +159,25 @@ class JenkinsPlugin(Plugin):
     def get_webhook_key(self):
         return "jenkins"
 
-    def on_receive_webhook(self, data, ip, headers):
+    def on_receive_webhook(self, url, data, ip, headers):
+        # data is of the form:
+        # {
+        #   "name":"Synapse",
+        #   "url":"job/Synapse/",
+        #   "build": {
+        #     "full_url":"http://localhost:9009/job/Synapse/8/",
+        #     "number":8,
+        #     "phase":"FINALIZED",
+        #     "status":"SUCCESS",
+        #     "url":"job/Synapse/8/",
+        #     "scm": {
+        #        "url":"git@github.com:matrix-org/synapse.git",
+        #        "branch":"origin/develop",
+        #        "commit":"72aef114ab1201f5a5cd734220c9ec738c4e2910"
+        #      },
+        #     "artifacts":{}
+        #    }
+        # }
+        log.info("URL: %s", url)
         log.info("Data: %s", data)
+        log.info("Headers: %s", headers)

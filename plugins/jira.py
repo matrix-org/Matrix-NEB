@@ -240,7 +240,7 @@ class JiraPlugin(Plugin):
     def get_webhook_key(self):
         return "jira"
 
-    def on_receive_webhook(self, data, ip, headers):
+    def on_receive_webhook(self, url, data, ip, headers):
         j = json.loads(data)
 
         info = self.get_webhook_json_keys(j)

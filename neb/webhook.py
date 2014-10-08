@@ -40,6 +40,7 @@ class NebHookServer(threading.Thread):
         try:
             # tuple (body, status_code, headers)
             response = plugin.on_receive_webhook(
+                request.url,
                 request.get_data(),
                 request.remote_addr,
                 request.headers

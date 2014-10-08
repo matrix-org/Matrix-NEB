@@ -189,7 +189,7 @@ class GithubPlugin(Plugin):
         pr_title = pr["title"]
 
         user = data["sender"]["login"]
-        
+
         msg = "[%s] %s %s pull request #%s: %s [%s] - %s" % (
             repo_name,
             user,
@@ -209,9 +209,9 @@ class GithubPlugin(Plugin):
         title = issue["title"]
         issue_num = issue["number"]
         url = issue["html_url"]
-        
+
         user = data["sender"]["login"]
-        
+
         if action == "assigned":
             try:
                 assignee = data["assignee"]["login"]
@@ -241,7 +241,7 @@ class GithubPlugin(Plugin):
         self.send_message_to_repos(repo_name, msg)
 
 
-    def on_receive_webhook(self, data, ip, headers):
+    def on_receive_webhook(self, url, data, ip, headers):
         if self.store.get("secret_token"):
             token_sha1 = headers.get('X-Hub-Signature')
             payload_body = data
@@ -283,7 +283,7 @@ class GithubPlugin(Plugin):
             # looks like this branch was deleted, no commit and deleted=true
             commit_name = j["pusher"]["name"]
             push_type = "delete"
-                
+
         commit_uname = None
         try:
             commit_uname = j["head_commit"]["committer"]["username"]
