@@ -7,6 +7,7 @@ from neb.matrix import Matrix, MatrixConfig
 from plugins.tumblr import TumblrPlugin
 from plugins.b64 import Base64Plugin
 from plugins.guess_number import GuessNumberPlugin
+from plugins.jenkins import JenkinsPlugin
 from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
 from plugins.github import GithubPlugin
@@ -74,6 +75,7 @@ def main(config):
         JiraPlugin(),
         UrlPlugin(),
         GithubPlugin(),
+        JenkinsPlugin(),
     ]
 
     for plugin in plugins:
@@ -87,7 +89,7 @@ def main(config):
             matrix.event_loop()
         except Exception as e:
             log.error("Ruh roh: %s", e)
-        time.sleep(5)    
+        time.sleep(5)
 
     log.info("Terminating.")
 
