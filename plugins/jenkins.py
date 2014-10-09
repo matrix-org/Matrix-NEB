@@ -100,7 +100,7 @@ class JenkinsPlugin(Plugin):
         self._send_track_event(event["room_id"], project_names)
 
         return self._body(
-            "Jenkins notifications for projects %s will be displayed." % (project_names)
+            "Jenkins notifications for projects %s will be displayed when they fail." % (project_names)
         )
 
     def _clear_tracking(self, event, args):
@@ -118,6 +118,15 @@ class JenkinsPlugin(Plugin):
             },
             state=True
         )
+
+    def send_message_to_repos(self, repo, push_message):
+        # send messages to all rooms registered with this project.
+        for (room_id, room_info) in self.state.iteritems():
+            try:
+                if repo in room_info["projects"]:
+                    self.matrix.send_message(room_id, self._body(push_message))
+            except KeyError:
+                pass
 
     def _set_track_event(self, event):
         room_id = event["room_id"]
@@ -181,3 +190,35 @@ class JenkinsPlugin(Plugin):
         log.info("URL: %s", url)
         log.info("Data: %s", data)
         log.info("Headers: %s", headers)
+
+        j = json.loads(data)
+        name = j["name"]
+
+        # add the project if we didn't know about it before
+        if name not in self.store.get("known_projects"):
+            log.info("Added new job: %s", name)
+            projects = self.store.get("known_projects")
+            projects.append(name)
+            self.store.set("known_projects", projects)
+
+        status = j["build"]["status"]
+        branch = None
+        commit = None
+        info = ""
+        try:
+            branch = j["build"]["scm"]["branch"]
+            commit = j["build"]["scm"]["commit"]
+            info = "%s commit %s " % (branch, commit)
+        except KeyError:
+            pass
+
+        if status.upper() != "SUCCESS":
+            # complain
+            msg = "[%s] %s - %s" % (
+                name,
+                status,
+                info
+            )
+            self.send_message_to_repos(name, msg)
+
+
