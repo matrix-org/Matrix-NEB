@@ -208,6 +208,8 @@ class JenkinsPlugin(Plugin):
                 log.warn("Jenkins webhook: FAILED SECRET TOKEN AUTH. Mismatch. IP=%s",
                          ip)
                 return ("", 403, {})
+            else:
+                log.info("Jenkins webhook: Secret verified.")
 
 
         # add the project if we didn't know about it before
