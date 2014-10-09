@@ -202,6 +202,22 @@ class GithubPlugin(Plugin):
 
         self.send_message_to_repos(repo_name, msg)
 
+    def on_receive_create(self, data):
+        if data["ref_type"] != "branch":
+            return  # only echo branch creations for now.
+
+        branch_name = data["ref"]
+        user = data["sender"]["login"]
+        repo_name = data["repository"]["full_name"]
+
+        msg = "[%s] %s created a new branch: %s" % (
+            repo_name,
+            user,
+            branch_name
+        )
+
+        self.send_message_to_repos(repo_name, msg)
+
     def on_receive_issue(self, data):
         action = data["action"]
         repo_name = data["repository"]["full_name"]
@@ -260,6 +276,8 @@ class GithubPlugin(Plugin):
         elif event_type == "issues":
             self.on_receive_issue(json.loads(data))
             return
+        elif event_type == "create":
+            self.on_receive_create(json.loads(data))
 
         j = json.loads(data)
         repo_name = j["repository"]["full_name"]
