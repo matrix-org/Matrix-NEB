@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 from neb.engine import Plugin, Command, KeyValueStore
 
-from hashlib import sha1
-import hmac
 import json
+import urlparse
 
 import logging
 
@@ -193,6 +192,23 @@ class JenkinsPlugin(Plugin):
 
         j = json.loads(data)
         name = j["name"]
+
+        query_dict = urlparse.parse_qs(urlparse.urlparse(url).query)
+        if "secret" in query_dict and self.store.get("secret_token"):
+            # The jenkins Notification plugin does not support any sort of
+            # "execute this code on this json object before you send" so we can't
+            # send across HMAC SHA1s like with github :( so a secret token will
+            # have to do.
+            secrets = query_dict["secret"]
+            if len(secrets) > 1:
+                log.warn("Jenkins webhook: FAILED SECRET TOKEN AUTH. Too many secrets. IP=%s",
+                         ip)
+                return ("", 403, {})
+            elif secrets[0] != self.store.get("secret_token"):
+                log.warn("Jenkins webhook: FAILED SECRET TOKEN AUTH. Mismatch. IP=%s",
+                         ip)
+                return ("", 403, {})
+
 
         # add the project if we didn't know about it before
         if name not in self.store.get("known_projects"):
