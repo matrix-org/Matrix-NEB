@@ -218,6 +218,16 @@ class GithubPlugin(Plugin):
 
         self.send_message_to_repos(repo_name, msg)
 
+    def on_receive_ping(self, data):
+        repo_name = data["repository"]["full_name"]
+        # add the project if we didn't know about it before
+        if repo_name not in self.store.get("known_projects"):
+            log.info("Added new repo: %s", repo_name)
+            projects = self.store.get("known_projects")
+            projects.append(repo_name)
+            self.store.set("known_projects", projects)
+
+
     def on_receive_issue(self, data):
         action = data["action"]
         repo_name = data["repository"]["full_name"]
@@ -278,6 +288,8 @@ class GithubPlugin(Plugin):
             return
         elif event_type == "create":
             self.on_receive_create(json.loads(data))
+        elif event_type == "ping":
+            self.on_receive_ping(json.loads(data))
 
         j = json.loads(data)
         repo_name = j["repository"]["full_name"]
