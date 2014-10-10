@@ -19,19 +19,36 @@ Create a room and invite NEB to it, and then type ``!help`` for a list of valid 
 Plugins
 =======
 
+Github
+------
+ - Processes webhook requests and send messages to interested rooms.
+ - Supports secret token HMAC authentication.
+ - Supported events: ``push``, ``create``, ``ping``, ``pull_request``
+ 
+Jenkins
+-------
+ - Sends build failure messages to interested rooms.
+ - Support via the Notification plugin.
+ - Supports shared secret authentication.
+
+JIRA
+----
+ - Processes webhook requests and sends messages to interested rooms.
+ - Resolves JIRA issue IDs into one-line summaries as they are mentioned by other people.
+
+Guess Number
+------------
+ - Basic guess-the-number game.
+
+URL
+---
+ - Provides URL encoding/decoding.
+
+B64
+---
+ - Provides base64 encoding/decoding.
+
 Tumblr
 ------
- - Support via Tumblr API v1
- - TODO: v2 support, using JSON not XML. Proper image support. Get entire state from rooms. Support extra options as described in help.
-
-RSS Feeds
----------
- - WIP
-
-Digg
-----
- - WIP
-
-Reddit
-------
- - WIP
+ - Sends tumblr posts for Tumblr users to interested rooms.
+ - Unstable, WIP.
