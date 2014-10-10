@@ -288,8 +288,10 @@ class GithubPlugin(Plugin):
             return
         elif event_type == "create":
             self.on_receive_create(json.loads(data))
+            return
         elif event_type == "ping":
             self.on_receive_ping(json.loads(data))
+            return
 
         j = json.loads(data)
         repo_name = j["repository"]["full_name"]
