@@ -87,7 +87,7 @@ class GithubPlugin(Plugin):
         push_message = ""
 
         if info["type"] == "delete":
-            push_message = "[%s] %s deleted %s" % (
+            push_message = '[%s] %s <font color="red"><b>deleted</font> %s</b>' % (
                 info["repo"],
                 info["commit_username"],
                 info["branch"]
@@ -96,7 +96,7 @@ class GithubPlugin(Plugin):
             # form the template:
             # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
             # 1<=3 of <branch name> <short hash> <full username>: <comment>
-            push_message = "[%s] %s pushed to %s: %s  - %s" % (
+            push_message = "[%s] %s pushed to <b>%s</b>: %s  - %s" % (
                 info["repo"],
                 info["commit_username"],
                 info["branch"],
@@ -114,7 +114,11 @@ class GithubPlugin(Plugin):
         for (room_id, room_info) in self.state.iteritems():
             try:
                 if repo in room_info["projects"]:
-                    self.matrix.send_message(room_id, self._body(push_message))
+                    self.matrix.send_event(
+                        room_id, 
+                        "org.matrix.custom.text.html",
+                        self._rich_body(push_message)
+                    )
             except KeyError:
                 pass
 
@@ -210,7 +214,7 @@ class GithubPlugin(Plugin):
         user = data["sender"]["login"]
         repo_name = data["repository"]["full_name"]
 
-        msg = "[%s] %s created a new branch: %s" % (
+        msg = '[%s] %s <font color="green">created</font> a new branch: <b>%s</b>' % (
             repo_name,
             user,
             branch_name

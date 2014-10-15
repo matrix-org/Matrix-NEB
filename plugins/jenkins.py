@@ -123,7 +123,11 @@ class JenkinsPlugin(Plugin):
         for (room_id, room_info) in self.state.iteritems():
             try:
                 if repo in room_info["projects"]:
-                    self.matrix.send_message(room_id, self._body(push_message))
+                    self.matrix.send_event(
+                        room_id,
+                        "org.matrix.custom.text.html", 
+                        self._rich_body(push_message)
+                    )
             except KeyError:
                 pass
 
@@ -232,7 +236,7 @@ class JenkinsPlugin(Plugin):
 
         if status.upper() != "SUCCESS":
             # complain
-            msg = "[%s] %s - %s" % (
+            msg = '<font color="red">[%s] <b>%s - %s</b></font>' % (
                 name,
                 status,
                 info
