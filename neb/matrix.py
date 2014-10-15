@@ -202,8 +202,6 @@ class Matrix(object):
                                 self.send_message(room, res)
                         else:
                             self.send_message(room, responses)
-                else:
-                    self.send_message(room, self._body("Unknown command."))
             except NebError as ne:
                 self.send_message(room, self._body(ne.as_str()))
             except Exception as e:
