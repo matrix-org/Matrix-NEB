@@ -4,6 +4,7 @@ from . import NebError
 
 import BaseHTTPServer
 import json
+import re
 import threading
 import urllib
 
@@ -73,8 +74,10 @@ class Plugin(object):
 
     def _rich_body(self, html):
         return {
-            "body": html,
-            "msgtype": "m.text"
+            "body": re.sub('<[^<]+?>', '', html),
+            "msgtype": "m.text",
+            "format": "org.matrix.custom.html",
+            "formatted_body": html
         }
 
 

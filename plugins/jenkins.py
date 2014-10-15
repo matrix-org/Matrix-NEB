@@ -125,7 +125,6 @@ class JenkinsPlugin(Plugin):
                 if repo in room_info["projects"]:
                     self.matrix.send_event(
                         room_id,
-                        "org.matrix.custom.text.html", 
                         self._rich_body(push_message)
                     )
             except KeyError:
