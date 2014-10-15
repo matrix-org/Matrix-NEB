@@ -71,6 +71,12 @@ class Plugin(object):
             "body": text
         }
 
+    def _rich_body(self, html):
+        return {
+            "body": html,
+            "msgtype": "m.text"
+        }
+
 
 class KeyValueStore(object):
 
