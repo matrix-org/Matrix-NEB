@@ -123,7 +123,7 @@ class JenkinsPlugin(Plugin):
         for (room_id, room_info) in self.state.iteritems():
             try:
                 if repo in room_info["projects"]:
-                    self.matrix.send_event(
+                    self.matrix.send_message(
                         room_id,
                         self._rich_body(push_message)
                     )
