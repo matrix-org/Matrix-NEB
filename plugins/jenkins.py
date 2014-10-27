@@ -225,11 +225,23 @@ class JenkinsPlugin(Plugin):
         status = j["build"]["status"]
         branch = None
         commit = None
+        git_url = None
+        jenkins_url = None
         info = ""
         try:
             branch = j["build"]["scm"]["branch"]
             commit = j["build"]["scm"]["commit"]
-            info = "%s commit %s " % (branch, commit)
+            git_url = j["build"]["scm"]["url"]
+            jenkins_url = j["build"]["full_url"]
+            # try to format the git url nicely
+            if (git_url.startswith("git@github.com") and
+                    git_url.endswith(".git")):
+                # git@github.com:matrix-org/synapse.git
+                org_and_repo = git_url.split(":")[1][:-4]
+                commit = "https://github.com/%s/commit/%s" % (org_and_repo, commit)
+                
+
+            info = "%s commit %s - %s" % (branch, commit, jenkins_url)
         except KeyError:
             pass
 
