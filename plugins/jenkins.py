@@ -45,6 +45,10 @@ class JenkinsPlugin(Plugin):
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
 
+        self.failed_builds = {
+            # projectName:branch: { commit:x }
+        }
+
     def get_commands(self):
         """Return human readable commands with descriptions.
 
@@ -245,6 +249,8 @@ class JenkinsPlugin(Plugin):
         except KeyError:
             pass
 
+        fail_key = "%s:%s" % (name, branch)
+        
         if status.upper() != "SUCCESS":
             # complain
             msg = '<font color="red">[%s] <b>%s - %s</b></font>' % (
@@ -252,6 +258,30 @@ class JenkinsPlugin(Plugin):
                 status,
                 info
             )
-            self.send_message_to_repos(name, msg)
 
+            if fail_key in self.failed_builds:
+                info = "%s failing since commit %s - %s" % (branch, self.failed_builds[fail_key]["commit"], jenkins_url)
+                msg = '<font color="red">[%s] <b>%s - %s</b></font>' % (
+                    name,
+                    status,
+                    info
+                )
+            else:  # add it to the list
+                self.failed_builds[fail_key] = {
+                    "commit": commit
+                }
+
+            self.send_message_to_repos(name, msg)
+        else:
+            # do we need to prod people?
+            if fail_key in self.failed_builds:
+                info = "%s commit %s" % (branch, commit)
+                msg = '<font color="green">[%s] <b>%s - %s</b></font>' % (
+                    name,
+                    status,
+                    info
+                )
+                self.send_message_to_repos(name, msg)
+                self.failed_builds.pop(fail_key)
+                
 
