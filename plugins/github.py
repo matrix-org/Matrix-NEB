@@ -27,7 +27,8 @@ class GithubPlugin(Plugin):
     HELP = [
         "show-projects :: Display which projects this bot has been configured with.",
         "track-projects name,name2.name3 :: Track when commits are added to the named projects name, name2, name3.",
-        "clear-tracking :: Clears tracked projects from this room."
+        "clear-tracking :: Clears tracked projects from this room.",
+        "color :: Set a color for certain github repos / branches. E.g. color bob/myrepo develop green"
     ]
 
     def __init__(self, config="github.json"):
@@ -62,7 +63,8 @@ class GithubPlugin(Plugin):
         actions = {
             "show-projects": self._show_projects,
             "track-projects": self._track_projects,
-            "clear-tracking": self._clear_tracking
+            "clear-tracking": self._clear_tracking,
+            "color": self._color
         }
 
         # TODO: make this configurable
@@ -152,6 +154,71 @@ class GithubPlugin(Plugin):
         return self._body(
             "Stopped tracking projects."
         )
+
+    def _color(self, event, options):
+        branch = None
+        color = None
+        repo = None
+        if options < 3:
+            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
+
+        options = options[2:]
+
+        if len(options) > 3:
+            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
+        elif len(options) == 3:
+            repo = options[0]
+            branch = options[1]
+            color = options[2]
+        elif len(options) == 2:
+            repo = options[0]
+            color = options[1]
+        else:
+            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
+        
+        if not repo in self.store.get("known_projects"):
+            return self._body("Unknown github repo: %s" % repo)
+
+        # basic color validation
+        valid = False
+        color = color.strip().lower()
+        if len(color) == 0:
+            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
+
+        if color in ["white","silver","gray","black","red","maroon","yellow","olive","lime","green","aqua","teal","blue","navy","fuchsia","purple"]:
+            valid = True
+        else:
+            test_color = color
+            if color[0] == '#':
+                test_color = color[1:]
+            try:
+                color_int = int(test_color, 16)
+                valid = color_int <= 0xFFFFFF
+                color = "#%06x" % color_int
+            except:
+                return self._body("Color should be like '#112233', '0x112233' or 'green'")
+
+        if not valid:
+            return self._body("Color should be like '#112233', '0x112233' or 'green'")
+
+        return self._body("Not yet implemented. Valid. Repo=%s Branch=%s Color=%s" % (repo, branch, color))
+
+ #       color_list = self.store.get("project_colors")
+ #       color_list
+
+ #       self._send_color_event(event["room_id"], repo, branch, color)
+
+    def _send_color_event(self, room_id, repo, branch, color):
+        self.matrix.send_event(
+            room_id,
+            "org.matrix.neb.plugin.github.projects.color",
+            {
+                "projects": project_names
+            },
+            state=True
+        )
+    
+
 
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_event(
