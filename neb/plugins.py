@@ -1,3 +1,7 @@
+# TODO:
+# Add @admin_only decorator; execute_cmd needs Context
+# Add @help decorator; self.cmd_help {} for NebPlugin?
+
 
 class NebPlugin(object):
 
