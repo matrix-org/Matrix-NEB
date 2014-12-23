@@ -23,11 +23,6 @@ log = logging.getLogger(name=__name__)
 # - Add utility plugins in neb package to do things like "invite x to room y"?
 # - Add other plugins as tests of plugin architecture (e.g. anagrams, dictionary lookup, etc)
 
-# Tumblr specific:
-# - Use JSON not XML. Consider using api v2 (though requires oauth key annoyingly)
-# - Send actual images, not just links!!! Implement ALL THE CONFIG OPTIONS.
-# - Tumblr config needs a private_rooms key for people who duplicate public #channels so they don't clash.
-
 
 def generate_config(url, username, token, config_loc):
     config = MatrixConfig(
