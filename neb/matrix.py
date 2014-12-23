@@ -9,23 +9,19 @@ from urllib2 import Request
 from neb import NebError
 from neb.webhook import NebHookServer
 
-import logging
-
-log = logging.getLogger(name=__name__)
+import logging as log
 
 
 class MatrixConfig(object):
     URL = "url"
     USR = "user"
     TOK = "token"
-    PAS = "password"
     ADM = "admins"
 
-    def __init__(self, hs_url, user_id, access_token, password, admins):
+    def __init__(self, hs_url, user_id, access_token, admins):
         self.user_id = user_id
         self.token = access_token
         self.base_url = hs_url
-        self.password = password
         self.admins = admins
 
     @classmethod
@@ -34,7 +30,6 @@ class MatrixConfig(object):
             MatrixConfig.URL: config.base_url,
             MatrixConfig.TOK: config.token,
             MatrixConfig.USR: config.user_id,
-            MatrixConfig.PAS: config.password,
             MatrixConfig.ADM: config.admins
         }, indent=4))
 
@@ -45,7 +40,6 @@ class MatrixConfig(object):
             hs_url=j[MatrixConfig.URL],
             user_id=j[MatrixConfig.USR],
             access_token=j[MatrixConfig.TOK],
-            password=j[MatrixConfig.PAS],
             admins=j[MatrixConfig.ADM]
         )
 
@@ -233,7 +227,7 @@ class Matrix(object):
             except Exception as e:
                 log.exception(e)
         except Exception as e:
-            print "Couldn't process event: %s" % e
+            log.error("Couldn't process event: %s", e)
 
     def event_loop(self):
         end = "END"

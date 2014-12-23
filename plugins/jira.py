@@ -5,9 +5,7 @@ import json
 import re
 import requests
 
-import logging
-
-log = logging.getLogger(name=__name__)
+import logging as log
 
 
 class JiraPlugin(Plugin):
@@ -211,8 +209,8 @@ class JiraPlugin(Plugin):
             except KeyError:
                 pass
 
-        print "Plugin: JIRA Sync state:"
-        print json.dumps(self.state, indent=4)
+        log.debug("Plugin: JIRA Sync state:")
+        log.debug(json.dumps(self.state, indent=4))
 
     def _get_issue_info(self, issue_key):
         url = self._url("/rest/api/2/issue/%s" % issue_key)

@@ -13,17 +13,14 @@ from plugins.url import UrlPlugin
 from plugins.github import GithubPlugin
 
 import logging
-import sys
 import time
 
-logging.basicConfig(level=6)
 log = logging.getLogger(name=__name__)
 
 # TODO:
 # - Allow multiple users in one NEB process. Particularly important when rate limiting kicks in. Plugins already
 #   support this because they just operate on the matrix instance given to them.
 # - Async requests in plugins PREASE
-# - Make setting up accounts less confusing.
 # - Add utility plugins in neb package to do things like "invite x to room y"?
 # - Add other plugins as tests of plugin architecture (e.g. anagrams, dictionary lookup, etc)
 
@@ -33,24 +30,14 @@ log = logging.getLogger(name=__name__)
 # - Tumblr config needs a private_rooms key for people who duplicate public #channels so they don't clash.
 
 
-def generate_config(url, username, password):
+def generate_config(url, username, token, config_loc):
     config = MatrixConfig(
             hs_url=url,
             user_id=username,
-            access_token=None,
-            password=password,
+            access_token=token,
             admins=[]
     )
-    m = Matrix(config)
-
-    log.info("Registering user %s", username)
-    response = m.register()
-    config.user_id = response["user_id"]
-    config.token = response["access_token"]
-
-    fname = raw_input("Enter name of config file: ")
-    log.info("Saving config to %s", fname)
-    save_config(fname, config)
+    save_config(config_loc, config)
     return config
 
 
@@ -60,8 +47,32 @@ def save_config(loc, config):
 
 
 def load_config(loc):
-    with open(loc, 'r') as f:
-        return MatrixConfig.from_file(f)
+    try:
+        with open(loc, 'r') as f:
+            return MatrixConfig.from_file(f)
+    except:
+        pass
+
+
+def configure_logging(logfile):
+    log_format = "%(asctime)s %(levelname)s: %(message)s"
+    if logfile:
+        logging.basicConfig(
+            filename=args.log,
+            level=logging.DEBUG,
+            format=log_format
+        )
+        # also log to console
+        console = logging.StreamHandler()
+        console.setLevel(logging.INFO)
+        formatter = logging.Formatter(log_format)
+        console.setFormatter(formatter)
+        logging.getLogger('').addHandler(console)
+    else:
+        logging.basicConfig(
+            level=6,
+            format=log_format
+        )
 
 
 def main(config):
@@ -96,28 +107,37 @@ def main(config):
 
 if __name__ == '__main__':
     a = argparse.ArgumentParser("Runs NEB. See plugins for commands.")
-    a.add_argument("-c", "--config", help="The config to read from.", dest="config")
-    a.add_argument("-u", "--url", help="The home server url up to the version path e.g. localhost/_matrix/client/api/v1", dest="url")
-    a.add_argument("-r", "--register", help="Register a new account as the specified username.", dest="register")
+    a.add_argument(
+        "-c", "--config", dest="config",
+        help="The config to create or read from."
+    )
+    a.add_argument(
+        "-l", "--log-file", dest="log",
+        help="Log to this file."
+    )
     args = a.parse_args()
+
+    configure_logging(args.log)
 
     config = None
     if args.config:
         log.info("Loading config from %s", args.config)
         config = load_config(args.config)
-    elif args.register and args.url:
-        log.info("Creating config for user %s on home server %s", args.register, args.url)
-        password = "_"
-        password2 = "__"
-        while password != password2:
-            password = getpass.getpass("Enter a password for this new account: ")
-            password2 = getpass.getpass("Reconfirm the password: ")
-
-        config = generate_config(args.url, args.register, password)
+        if not config:
+            log.info("Setting up for an existing account.")
+            print "Config file could not be loaded."
+            print "NEB works with an existing Matrix account. Please set up an account for NEB if you haven't already.'"
+            print "The config for this account will be saved to '%s'" % args.config
+            hsurl = raw_input("Home server URL (e.g. http://localhost:8008): ").strip()
+            if hsurl.endswith("/"):
+                hsurl = hsurl[:-1]
+            hsurl = hsurl + "/_matrix/client/api/v1" # v1 compatibility
+            username = raw_input("Full user ID (e.g. @user:domain): ").strip()
+            token = raw_input("Access token: ").strip()
+            config = generate_config(hsurl, username, token, args.config)
     else:
         a.print_help()
-        print "You probably want to run something like 'python neb.py -r neb -u \"http://localhost:8008/_matrix/client/api/v1\"'"
-        print "After you make a config file, you probably want to run 'python neb.py -c CONFIG_NAME'"
+        print "You probably want to run 'python neb.py -c neb.config'"
 
     if config:
         main(config)

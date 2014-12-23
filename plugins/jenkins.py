@@ -4,9 +4,7 @@ from neb.engine import Plugin, Command, KeyValueStore
 import json
 import urlparse
 
-import logging
-
-log = logging.getLogger(name=__name__)
+import logging as log
 
 
 class JenkinsPlugin(Plugin):
@@ -168,8 +166,8 @@ class JenkinsPlugin(Plugin):
             except KeyError:
                 pass
 
-        print "Plugin: Jenkins Sync state:"
-        print json.dumps(self.state, indent=4)
+        log.debug("Plugin: Jenkins Sync state:")
+        log.debug(json.dumps(self.state, indent=4))
 
     def get_webhook_key(self):
         return "jenkins"
@@ -243,14 +241,14 @@ class JenkinsPlugin(Plugin):
                 # git@github.com:matrix-org/synapse.git
                 org_and_repo = git_url.split(":")[1][:-4]
                 commit = "https://github.com/%s/commit/%s" % (org_and_repo, commit)
-                
+
 
             info = "%s commit %s - %s" % (branch, commit, jenkins_url)
         except KeyError:
             pass
 
         fail_key = "%s:%s" % (name, branch)
-        
+
         if status.upper() != "SUCCESS":
             # complain
             msg = '<font color="red">[%s] <b>%s - %s</b></font>' % (
@@ -283,5 +281,5 @@ class JenkinsPlugin(Plugin):
                 )
                 self.send_message_to_repos(name, msg)
                 self.failed_builds.pop(fail_key)
-                
+
 

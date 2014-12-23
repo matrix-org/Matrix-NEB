@@ -6,9 +6,7 @@ from flask import Flask
 from flask import request
 import threading
 
-import logging
-
-log = logging.getLogger(name=__name__)
+import logging as log
 
 app = Flask("NebHookServer")
 

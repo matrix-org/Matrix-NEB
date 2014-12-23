@@ -9,9 +9,7 @@ import threading
 import urllib
 import sys
 
-import logging
-
-log = logging.getLogger(name=__name__)
+import logging as log
 
 
 class TumblrPlugin(Plugin):
@@ -134,8 +132,8 @@ class TumblrPlugin(Plugin):
                 else:
                     log.info("Synced existing state for %s (%s)", room_id, username)
 
-            print "Plugin: Tumblr Sync state:"
-            print json.dumps(self.state, indent=4)
+            log.debug("Plugin: Tumblr Sync state:")
+            log.debug(json.dumps(self.state, indent=4))
 
     def follow(self, event, args):
         username = args[1]
@@ -250,14 +248,14 @@ class TumblrPlugin(Plugin):
                 body = p.getElementsByTagName("regular-body")[0]
                 content = body.childNodes[0].data
             except Exception as e:
-                print "Can't get regular-body for post: %s" % url
+                log.debug("Can't get regular-body for post: %s" % url)
 
             try:
                 photo_urls = p.getElementsByTagName("photo-url")
                 for u in photo_urls:
                     entries.append({"url":u.firstChild.nodeValue, "content":u.firstChild.nodeValue, "ts":ts})
             except Exception as e:
-                print "Can't get photo-url for post: %s : %s" % (url, e)
+                log.debug("Can't get photo-url for post: %s : %s" % (url, e))
 
             entries.append({"url":url, "content": content, "ts": ts})
 

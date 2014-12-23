@@ -5,9 +5,7 @@ from hashlib import sha1
 import hmac
 import json
 
-import logging
-
-log = logging.getLogger(name=__name__)
+import logging as log
 
 
 class GithubPlugin(Plugin):
@@ -117,7 +115,7 @@ class GithubPlugin(Plugin):
             try:
                 if repo in room_info["projects"]:
                     self.matrix.send_message(
-                        room_id, 
+                        room_id,
                         self._rich_body(push_message)
                     )
             except KeyError:
@@ -175,7 +173,7 @@ class GithubPlugin(Plugin):
             color = options[1]
         else:
             return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
-        
+
         if not repo in self.store.get("known_projects"):
             return self._body("Unknown github repo: %s" % repo)
 
@@ -217,7 +215,7 @@ class GithubPlugin(Plugin):
             },
             state=True
         )
-    
+
 
 
     def _send_track_event(self, room_id, project_names):
@@ -422,7 +420,7 @@ class GithubPlugin(Plugin):
             except KeyError:
                 pass
 
-        print "Plugin: GitHub Sync state:"
-        print json.dumps(self.state, indent=4)
+        log.debug("Plugin: GitHub Sync state:")
+        log.debug(json.dumps(self.state, indent=4))
 
 

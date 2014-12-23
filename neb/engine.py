@@ -2,11 +2,11 @@
 from collections import namedtuple
 from . import NebError
 
-import BaseHTTPServer
 import json
 import re
-import threading
 import urllib
+
+import logging as log
 
 # Native.Extraction.Bot
 
@@ -16,7 +16,7 @@ Command = namedtuple("Command", 'cmd func summary help_list')
 class Plugin(object):
 
     def open(self, url, content=None):
-        print "[Plugin]url >>> %s  >>>> %s" % (url, content)
+        log.debug("[Plugin]url >>> %s  >>>> %s" % (url, content))
         response = urllib.urlopen(url, data=content)
         if response.code != 200:
             raise NebError("Request to %s failed: %s" % (url, response.code))
