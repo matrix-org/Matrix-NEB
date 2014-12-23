@@ -5,14 +5,13 @@ This is a generic client bot for Matrix which supports plugins.
 
 Setup
 =====
-First time (you'll be prompted where to store the generated config file):
-
-    python neb.py -r <username> -u <home server url>
-  
-Subsequent times:
+Run:
 
     python neb.py -c <config location>
-    
+
+If the config file cannot be found, you will be asked to enter in the home server URL,
+user ID and access token which will then be stored at this location.
+
 Create a room and invite NEB to it, and then type ``!help`` for a list of valid commands.
 
 
