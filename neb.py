@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import getpass
-import json
 
 from neb.matrix import Matrix, MatrixConfig
 from plugins.tumblr import TumblrPlugin
@@ -13,6 +11,7 @@ from plugins.url import UrlPlugin
 from plugins.github import GithubPlugin
 
 import logging
+import logging.handlers
 import time
 
 log = logging.getLogger(name=__name__)
@@ -56,23 +55,19 @@ def load_config(loc):
 
 def configure_logging(logfile):
     log_format = "%(asctime)s %(levelname)s: %(message)s"
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format=log_format
+    )
+
     if logfile:
-        logging.basicConfig(
-            filename=args.log,
-            level=logging.DEBUG,
-            format=log_format
-        )
-        # also log to console
-        console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
         formatter = logging.Formatter(log_format)
-        console.setFormatter(formatter)
-        logging.getLogger('').addHandler(console)
-    else:
-        logging.basicConfig(
-            level=6,
-            format=log_format
-        )
+
+        # rotate logs (20MB, max 6 = 120MB)
+        handler = logging.handlers.RotatingFileHandler(
+              logfile, maxBytes=(1000*1000*20), backupCount=5)
+        handler.setFormatter(formatter)
+        logging.getLogger('').addHandler(handler)
 
 
 def main(config):
@@ -118,6 +113,7 @@ if __name__ == '__main__':
     args = a.parse_args()
 
     configure_logging(args.log)
+    log.info("  ===== NEB initialising ===== ")
 
     config = None
     if args.config:
