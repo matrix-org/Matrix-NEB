@@ -73,7 +73,7 @@ def main(config):
     #    TumblrPlugin,
         Base64Plugin,
         GuessNumberPlugin,
-    #   JiraPlugin,
+        JiraPlugin,
         UrlPlugin,
     #   GithubPlugin,
     #   JenkinsPlugin,

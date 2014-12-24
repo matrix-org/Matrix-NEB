@@ -224,7 +224,7 @@ class Matrix(object):
         elif body.lower() == "neb?":
             self.send_message(
                 event["room_id"],
-                self._body("N E Bot v0.1.0 - Type !help to begin. Type !help <command> for help on a command."))
+                self._body("N E Bot v0.2.0 - Type !help to begin. Type !help <plugin> for help on a plugin."))
         else:
             try:
                 for p in self.plugins:

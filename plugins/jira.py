@@ -1,4 +1,5 @@
-from neb.engine import Plugin, Command, KeyValueStore
+from neb.engine import KeyValueStore
+from neb.plugins import Plugin
 
 import getpass
 import json
@@ -10,17 +11,29 @@ import logging as log
 
 class JiraPlugin(Plugin):
     """ Plugin for interacting with JIRA.
-
-    New events:
-        Type: org.matrix.neb.plugin.jira.issues.display
-        State: Yes
-        Content: {
-            display: [projectKey1, projectKey2, ...]
-        }
+    jira version : Display version information for this platform.
+    jira track <project>, <project>, ... : Track multiple projects
+    jira expand <project>, <project>, ... : Expand issue IDs for the given projects with issue information.
+    jira stop track|tracking : Stops tracking for all projects.
+    jira stop expand|expansion|expanding : Stop expanding jira issues.
+    jira show track|tracking : Show which projects are being tracked.
+    jira show expansion|expand|expanding : Show which project keys will result in issue expansion.
     """
+    name = "jira"
+    
+    TRACK = ["track", "tracking"]
+    EXPAND = ["expansion", "expand", "expanding"]
+    
+    # New events:
+    #    Type: org.matrix.neb.plugin.jira.issues.display
+    #    State: Yes
+    #    Content: {
+    #        display: [projectKey1, projectKey2, ...]
+    #    }
 
-    def __init__(self, config="jira.json"):
-        self.store = KeyValueStore(config)
+    def __init__(self, *args, **kwargs):
+        super(JiraPlugin, self).__init__(*args, **kwargs)
+        self.store = KeyValueStore("jira.json")
 
         if not self.store.has("url"):
             url = raw_input("JIRA URL: ").strip()
@@ -46,17 +59,6 @@ class JiraPlugin(Plugin):
             "clear-issues :: Stops tracking all issues."
         ]
 
-    def get_commands(self):
-        """Return human readable commands with descriptions.
-
-        Returns:
-            list[Command]
-        """
-        return [
-            Command("jira", self.jira, "Perform commands on a JIRA platform.",
-                    self.help_msgs),
-        ]
-
     def jira(self, event, args):
         if len(args) == 1:
             return [self._body(x) for x in self.help_msgs]
@@ -77,7 +79,9 @@ class JiraPlugin(Plugin):
         except KeyError:
             return self._body("Unknown JIRA action: %s" % action)
 
-    def _clear_issues(self, event, args):
+    def cmd_stop(self, event, action):
+    
+    
         self.matrix.send_event(
             event["room_id"],
             "org.matrix.neb.plugin.jira.issues.display",

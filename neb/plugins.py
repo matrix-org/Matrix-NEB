@@ -123,7 +123,7 @@ class Plugin(PluginInterface):
         
         raise CommandNotFoundError("Unknown command")
 
-                    
+
 class TopLevel(object):
 
     def __init__(self):
