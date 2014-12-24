@@ -28,7 +28,7 @@ class CommandNotFoundError(Exception):
 class PluginInterface(object):
 
     def __init__(self, matrix_api, matrix_endpoint, web_hook_server):
-        self.matrix_api = matrix_api
+        self.matrix = matrix_api
         self.endpoint = matrix_endpoint
 
     def run(self, event, arg_str):

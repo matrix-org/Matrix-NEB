@@ -12,8 +12,8 @@ import logging as log
 class JiraPlugin(Plugin):
     """ Plugin for interacting with JIRA.
     jira version : Display version information for this platform.
-    jira track <project>, <project>, ... : Track multiple projects
-    jira expand <project>, <project>, ... : Expand issue IDs for the given projects with issue information.
+    jira track <project> <project2> ... : Track multiple projects
+    jira expand <project> <project2> ... : Expand issue IDs for the given projects with issue information.
     jira stop track|tracking : Stops tracking for all projects.
     jira stop expand|expansion|expanding : Stop expanding jira issues.
     jira show track|tracking : Show which projects are being tracked.
@@ -52,24 +52,7 @@ class JiraPlugin(Plugin):
         self.auth = (self.store.get("user"), self.store.get("pass"))
         self.regex = re.compile(r"\b(([A-Za-z]+)-\d+)\b")
 
-        self.help_msgs = [
-            "server-info :: Retrieve server information.",
-            "track-issues AAA,BBB,CCC :: Display information about bugs which have " +
-            "the project key AAA, BBB or CCC.",
-            "clear-issues :: Stops tracking all issues."
-        ]
-
     def jira(self, event, args):
-        if len(args) == 1:
-            return [self._body(x) for x in self.help_msgs]
-
-        action = args[1]
-        actions = {
-            "server-info": self._server_info,
-            "track-issues": self._track_issues,
-            "clear-issues": self._clear_issues
-        }
-
         # TODO: make this configurable
         if event["user_id"] not in self.matrix.config.admins:
             return self._body("Sorry, only %s can do that." % json.dumps(self.matrix.config.admins))
@@ -80,43 +63,63 @@ class JiraPlugin(Plugin):
             return self._body("Unknown JIRA action: %s" % action)
 
     def cmd_stop(self, event, action):
-    
-    
-        self.matrix.send_event(
-            event["room_id"],
-            "org.matrix.neb.plugin.jira.issues.display",
-            {
-                "display": []
-            },
-            state=True
-        )
-        self._send_display_event(event["room_id"], [])
+        if action in self.TRACK:
+            self.matrix.send_event(
+                event["room_id"],
+                "org.matrix.neb.plugin.jira.issues.display",
+                {
+                    "display": []
+                },
+                state=True
+            )
+            self._send_display_event(event["room_id"], [])
 
-        url = self.store.get("url")
-        return self._body(
-            "Stopped tracking project keys from %s." % (url)
-        )
+            url = self.store.get("url")
+            return "Stopped tracking project keys from %s." % (url)
+        elif action in self.EXPAND:
+            self.matrix.send_event(
+                event["room_id"],
+                "org.matrix.neb.plugin.jira.issues.display",
+                {
+                    "display": []
+                },
+                state=True
+            )
+            self._send_display_event(event["room_id"], [])
 
-    def _track_issues(self, event, args):
-        project_keys_csv = ' '.join(args[2:]).upper().strip()
-        project_keys = [a.strip() for a in project_keys_csv.split(',')]
-        if not project_keys_csv:
+            url = self.store.get("url")
+            return "Stopped expanding project keys from %s." % (url)
+        else:
+            return "Unknown stop command"
+
+    def cmd_track(self, event, *args):
+        if not args:
             try:
                 return self._body("Currently tracking %s" % json.dumps(self.state[event["room_id"]]["display"]))
             except KeyError:
                 return self._body("Not tracking any projects currently.")
 
-        for key in project_keys:
+                
+        args = [k.upper() for k in args]
+        for key in args:
+            # FIXME: This accepts commas
             if not re.match("[A-Z][A-Z_0-9]+", key):
                 return self._body("Key %s isn't a valid project key." % key)
 
-        self._send_display_event(event["room_id"], project_keys)
+        self._send_display_event(event["room_id"], args)
 
 
         url = self.store.get("url")
-        return self._body(
-            "Issues for projects %s from %s will be displayed as they are mentioned/edited." % (project_keys, url)
-        )
+        return "Issues for projects %s from %s will be displayed as they are mentioned/edited." % (args, url)
+        
+    def cmd_version(self, event):
+        url = self._url("/rest/api/2/serverInfo")
+        response = json.loads(requests.get(url).text)
+
+        info = "%s : version %s : build %s" % (response["serverTitle"],
+               response["version"], response["buildNumber"])
+
+        return info
 
     def _send_display_event(self, room_id, project_keys):
         self.matrix.send_event(
@@ -128,14 +131,7 @@ class JiraPlugin(Plugin):
             state=True
         )
 
-    def _server_info(self, event, args):
-        url = self._url("/rest/api/2/serverInfo")
-        response = json.loads(requests.get(url).text)
-
-        info = "%s : version %s : build %s" % (response["serverTitle"],
-               response["version"], response["buildNumber"])
-
-        return self._body(info)
+    
 
     def on_msg(self, event, body):
         room_id = event["room_id"]
@@ -195,8 +191,7 @@ class JiraPlugin(Plugin):
         else:
             self.state[room_id]["display"] = []
 
-    def on_sync(self, matrix, sync):
-        self.matrix = matrix
+    def on_sync(self, sync):
 
         for room in sync["rooms"]:
             # see if we know anything about these rooms
