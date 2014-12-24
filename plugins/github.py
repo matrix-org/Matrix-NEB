@@ -402,7 +402,7 @@ class GithubPlugin(Plugin):
             "type": push_type
         })
 
-    def sync(self, matrix, sync):
+    def on_sync(self, matrix, sync):
         self.matrix = matrix
 
         for room in sync["rooms"]:

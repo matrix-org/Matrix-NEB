@@ -94,7 +94,7 @@ class TumblrPlugin(Plugin):
             ])
         ]
 
-    def sync(self, matrix, sync):
+    def on_sync(self, matrix, sync):
         self.matrix = matrix
         log.debug("Handling initial sync results")
         for room in sync["rooms"]:

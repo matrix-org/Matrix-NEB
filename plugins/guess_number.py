@@ -1,36 +1,27 @@
-from neb.engine import Plugin, Command
+from neb.plugins import Plugin
 import collections
 import random
 
 class GuessNumberPlugin(Plugin):
+    """Play a guess the number game.
+    You have to guess what the number is in a certain number of attempts. You
+    will be told information such as higher/lower than the guessed number.
+    guessnumber new : Starts a new game.
+    guessnumber hint : Get a hint for the number. Consumes an attempt.
+    guessnumber guess <number> : Guess the number. Consumes an attempt.
+    """
+    name = "guessnumber"
     
     MAX_NUM = 100
     ATTEMPTS = 5
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(Plugin, self).__init__(*args, **kwargs)
         self.games = {}
     
-    def get_commands(self):
-        return [
-            Command("guess-number", self.guess_number, "Play a guess the number game.", 
-            [
-                "guess-number <command>",
-                "guess-number new : Starts a new game.",
-                "guess-number hint : Get a hint for the number. Consumes an attempt.",
-                "guess-numbr <number> : Guess the number. Consumes an attempt."
-            ]),
-        ]
-        
-    def guess_number(self, event, args):
-        cmd = args[1]
-        if cmd == "new":
-            return self.start_new(event)
-        elif cmd == "hint":
-            return self.hint(event)
-        else:
-            return self.guess(event, args[1])
     
-    def start_new(self, event):
+    def cmd_new(self, event):
+        """Start a new game. 'guessnumber new'"""
         usr = event["user_id"]
         game_state = {
             "num": random.randint(0, GuessNumberPlugin.MAX_NUM),
@@ -40,7 +31,8 @@ class GuessNumberPlugin(Plugin):
         return self._body("Created a new game. Guess what the chosen number is between 0-%s. You have %s attempts." % 
         (GuessNumberPlugin.MAX_NUM, GuessNumberPlugin.ATTEMPTS))
         
-    def guess(self, event, num):
+    def cmd_guess(self, event, num):
+        """Make a guess. 'guessnumber guess <number>'"""
         usr = event["user_id"]
         
         if usr not in self.games:
@@ -64,16 +56,9 @@ class GuessNumberPlugin(Plugin):
         else:
             sign = "greater" if (target_num > int_num) else "less"
             return self._body("Nope. The number is %s than that." % sign)
-
-    def _add_attempt(self, usr):
-        self.games[usr]["attempts"] += 1
-                
-        if self.games[usr]["attempts"] >= GuessNumberPlugin.ATTEMPTS:
-            res = self._body("Out of tries. The number was %s." % self.games[usr]["num"])
-            self.games.pop(usr)
-            return res
         
-    def hint(self, event):
+    def cmd_hint(self, event):
+        """Get a hint. 'guessnumber hint'"""
         # hints give a 50% reduction, e.g. between 0-50, even/odd, ends with 12345
         usr = event["user_id"]
         
@@ -90,6 +75,14 @@ class GuessNumberPlugin(Plugin):
             return game_over
         
         return self._body(hint_func(num))
+        
+    def _add_attempt(self, usr):
+        self.games[usr]["attempts"] += 1
+                
+        if self.games[usr]["attempts"] >= GuessNumberPlugin.ATTEMPTS:
+            res = self._body("Out of tries. The number was %s." % self.games[usr]["num"])
+            self.games.pop(usr)
+            return res
         
     def _between(self, num):
         half = GuessNumberPlugin.MAX_NUM / 2

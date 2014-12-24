@@ -15,13 +15,6 @@ Command = namedtuple("Command", 'cmd func summary help_list')
 
 class Plugin(object):
 
-    def open(self, url, content=None):
-        log.debug("[Plugin]url >>> %s  >>>> %s" % (url, content))
-        response = urllib.urlopen(url, data=content)
-        if response.code != 200:
-            raise NebError("Request to %s failed: %s" % (url, response.code))
-        return response.read()
-
     def get_commands(self):
         """Return human readable commands with descriptions.
 
@@ -35,18 +28,7 @@ class Plugin(object):
         require a webhook."""
         pass
 
-    def on_receive_webhook(self, data, ip, headers):
-        """Someone hit your webhook.
-
-        Args:
-            data(str): The request body
-            ip(str): The source IP address
-            headers: A dict of headers (via .get("headername"))
-        Returns:
-            A tuple of (response_body, http_status_code, header_dict) or None
-            to return a 200 OK. Raise an exception to return a 500.
-        """
-        pass
+    
 
     def sync(self, matrix, initial_sync):
         """Configure yourself from the initial sync and use the given matrix for requests.
@@ -66,19 +48,7 @@ class Plugin(object):
         """A random event has come down the stream."""
         pass
 
-    def _body(self, text):
-        return {
-            "msgtype": "m.text",
-            "body": text
-        }
-
-    def _rich_body(self, html):
-        return {
-            "body": re.sub('<[^<]+?>', '', html),
-            "msgtype": "m.text",
-            "format": "org.matrix.custom.html",
-            "formatted_body": html
-        }
+    
 
 
 class KeyValueStore(object):

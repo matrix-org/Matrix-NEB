@@ -148,7 +148,7 @@ class JenkinsPlugin(Plugin):
         if event_type == "org.matrix.neb.plugin.jenkins.projects.tracking":
             self._set_track_event(event)
 
-    def sync(self, matrix, sync):
+    def on_sync(self, matrix, sync):
         self.matrix = matrix
 
         for room in sync["rooms"]:

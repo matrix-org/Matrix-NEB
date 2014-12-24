@@ -70,13 +70,13 @@ def main(config):
 
     log.debug("Setting up plugins...")
     plugins = [
-    #    TumblrPlugin(),
-        Base64Plugin(),
-    #    GuessNumberPlugin(),
-        JiraPlugin(),
-        UrlPlugin(),
-        GithubPlugin(),
-        JenkinsPlugin(),
+    #    TumblrPlugin,
+        Base64Plugin,
+        GuessNumberPlugin,
+    #   JiraPlugin,
+        UrlPlugin,
+    #   GithubPlugin,
+    #   JenkinsPlugin,
     ]
 
     for plugin in plugins:

@@ -191,7 +191,7 @@ class JiraPlugin(Plugin):
         else:
             self.state[room_id]["display"] = []
 
-    def sync(self, matrix, sync):
+    def on_sync(self, matrix, sync):
         self.matrix = matrix
 
         for room in sync["rooms"]:

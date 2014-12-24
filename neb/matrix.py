@@ -7,6 +7,7 @@ import urllib2
 from urllib2 import Request
 
 from neb import NebError
+from neb.plugins import CommandNotFoundError
 from neb.webhook import NebHookServer
 
 import logging as log
@@ -55,8 +56,8 @@ class Matrix(object):
 
     def __init__(self, config):
         self.config = config
-        self.plugins = []
-        self.cmds = {}
+        self.plugin_cls = {}
+        self.plugins = {}
 
     def _url(self, path, query={}, with_token=True):
         url = self.config.base_url + path
@@ -130,31 +131,34 @@ class Matrix(object):
 
     def add_plugin(self, plugin):
         log.debug("add_plugin %s", plugin)
-        self.plugins.append(plugin)
-        for cmd in plugin.get_commands():
-            if cmd.cmd in self.cmds:
-                raise NebError("Command %s already exists.", cmd.cmd)
-            self.cmds[cmd.cmd] = cmd
+        if not plugin.name:
+            raise NebError("No name for plugin %s" % plugin)
+            
+        self.plugin_cls[plugin.name] = plugin
 
     def setup(self):
         self.webhook = NebHookServer(8500)
         self.webhook.daemon = True
         self.webhook.start()
+        
+        # init the plugins
+        for cls_name in self.plugin_cls:
+            self.plugins[cls_name] = self.plugin_cls[cls_name](self, None, self.webhook)
 
         sync = self.initial_sync()
         log.debug("Notifying plugins of initial sync results")
-        for plugin in self.plugins:
-            plugin.sync(self, sync)
+        for plugin_name in self.plugins:
+            plugin = self.plugins[plugin_name]
+            plugin.on_sync(sync)
 
             # see if this plugin needs a webhook
             if plugin.get_webhook_key():
                 self.webhook.set_plugin(plugin.get_webhook_key(), plugin)
 
     def _help(self):
-        msgs = []
-        for (cmd, obj) in self.cmds.iteritems():
-            msgs.append(self._body(Matrix.PREFIX + cmd + " : " + obj.summary))
-        return msgs
+        body = ("Installed plugins: %s - Type '%shelp <plugin_name>' for more." % 
+            (self.plugins.keys(), Matrix.PREFIX))
+        return [self._body(body)]
 
     def _body(self, text):
         return {
@@ -178,22 +182,38 @@ class Matrix(object):
         if body.startswith(Matrix.PREFIX):
             room = event["room_id"]
             try:
-                cmd = body.split()[0][1:]
+                segments = body.split()
+                cmd = segments[0][1:]
                 if cmd == "help":
-                    try:
-                        for help_msg in self.cmds[body.split()[1]].help_list:
-                            self.send_message(room, self._body(help_msg))
-                    except:
+                    if len(segments) == 2 and segments[1] in self.plugins:
+                        # return help on a plugin
+                        self.send_message(
+                            room, 
+                            self._body(self.plugins[segments[1]].__doc__)
+                        )
+                    else:
+                        # return generic help
                         for help_msg in self._help():
                             self.send_message(room, help_msg)
-                elif cmd in self.cmds:
-                    c = self.cmds[cmd]
-                    args = shlex.split(body[1:].encode("utf8"))
-                    responses = c.func(event, args)
+                elif cmd in self.plugins:
+                    plugin = self.plugins[cmd]
+                    responses = None
+                    
+                    try:
+                        responses = plugin.run(event, unicode(" ".join(body.split()[1:]).encode("utf8")))
+                    except CommandNotFoundError as e:
+                        self.send_message(room, self._body(str(e)))
+                        
                     if responses:
+                        log.debug("[Plugin-%s] Response => %s", cmd, responses)
                         if type(responses) == list:
                             for res in responses:
-                                self.send_message(room, res)
+                                if type(res) in [str, unicode]:
+                                    self.send_message(room, self._body(res))
+                                else:
+                                    self.send_message(room, res)
+                        elif type(responses) in [str, unicode]:
+                            self.send_message(room, self._body(responses))
                         else:
                             self.send_message(room, responses)
             except NebError as ne:
@@ -208,7 +228,7 @@ class Matrix(object):
         else:
             try:
                 for p in self.plugins:
-                    p.on_msg(event, body)
+                    self.plugins[p].on_msg(event, body)
             except Exception as e:
                 log.exception(e)
 
@@ -223,7 +243,7 @@ class Matrix(object):
         except KeyError:
             try:
                 for p in self.plugins:
-                    p.on_event(event, etype)
+                    self.plugins[p].on_event(event, etype)
             except Exception as e:
                 log.exception(e)
         except Exception as e:

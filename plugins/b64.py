@@ -1,33 +1,23 @@
-from neb.engine import Plugin, Command
+from neb.plugins import Plugin
 
 import base64
 
 
 class Base64Plugin(Plugin):
+    """Encode or decode base64.
+    b64 encode <text> : Encode <text> as base64.
+    b64 decode <b64> : Decode <b64> and return text.
+    """
 
-    def get_commands(self):
-        """Return human readable commands with descriptions.
+    name="b64"
 
-        Returns:
-            list[Command]
-        """
-        return [
-            Command("b64encode", self.encode, "Encode as base64.", []),
-            Command("b64decode", self.decode, "Decode from base64.", [])
-        ]
+    def cmd_encode(self, event, *args):
+        """Encode as base64. 'b64 encode <text>'"""
+        # use the body directly so quotes are parsed correctly.
+        return base64.b64encode(event["content"]["body"][12:])
 
-    def encode(self, event, args):
-        content = ' '.join(args[1:])
-        return self._body(base64.b64encode(content))
-
-    def decode(self, event, args):
-        content = ' '.join(args[1:])
-        return self._body(base64.b64decode(content))
-
-    def _error(self, value):
-        return self._body("Cannot convert %s" % (value))
-
-
-    def sync(self, matrix, initial_sync):
-        pass
+    def cmd_decode(self, event, *args):
+        """Decode from base64. 'b64 decode <base64>'"""
+        # use the body directly so quotes are parsed correctly.
+        return base64.b64decode(event["content"]["body"][12:])
 
