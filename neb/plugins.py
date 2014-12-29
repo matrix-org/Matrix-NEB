@@ -33,19 +33,19 @@ class PluginInterface(object):
 
     def run(self, event, arg_str):
         pass
-        
+
     def on_sync(self, response):
         pass
-        
+
     def on_event(self, event, etype):
         pass
-        
+
     def on_msg(self, event, body):
         pass
-        
+
     def get_webhook_key(self):
         pass
-        
+
     def on_receive_webhook(self, data, ip, headers):
         """Someone hit your webhook.
 
@@ -58,8 +58,8 @@ class PluginInterface(object):
             to return a 200 OK. Raise an exception to return a 500.
         """
         pass
-        
-        
+
+
 class Plugin(PluginInterface):
 
     def open(self, url, content=None):
@@ -82,14 +82,14 @@ class Plugin(PluginInterface):
             "format": "org.matrix.custom.html",
             "formatted_body": html
         }
-        
+
     # =========================
-    
+
     def run(self, event, arg_str):
         args_array = shlex.split(arg_str.encode("utf8"))
         if len(args_array) == 0:
             raise CommandNotFoundError(self.__doc__)
-            
+
         # Structure is cmd_foo_bar_baz for "!foo bar baz"
         # This starts by assuming a no-arg cmd then getting progressively
         # more general until no args remain (in which case there isn't a match)
@@ -98,7 +98,7 @@ class Plugin(PluginInterface):
             if hasattr(self, possible_method):
                 method = getattr(self, possible_method)
                 remaining_args = [event] + args_array[len(args_array) - index:]
-                
+
                 # function params prefixed with "opt_" should be None if they
                 # are not specified. This makes cmd definitions a lot nicer for
                 # plugins rather than a generic arg array or no optional extras
@@ -110,8 +110,7 @@ class Plugin(PluginInterface):
                             remaining_args.append(None)
                         else:
                             break
-                
-                
+
                 try:
                     if remaining_args:
                         return method(*remaining_args)
@@ -120,27 +119,7 @@ class Plugin(PluginInterface):
                 except TypeError as e:
                     print e
                     raise CommandNotFoundError(method.__doc__)
-        
+
         raise CommandNotFoundError("Unknown command")
 
 
-class TopLevel(object):
-
-    def __init__(self):
-        web_hook = None
-        matrix_api = None
-        endpoint = None
-        self.plugins = {
-            "foo": FooPlugin(matrix_api, endpoint, web_hook),
-            "boo": FooPlugin(matrix_api, endpoint, web_hook)
-        }
-        
-    def run(self, arg_str):
-        arg_tokens = arg_str.split()
-        plugin_name = arg_tokens[0]
-            
-        if plugin_name in self.plugins:
-            return self.plugins[plugin_name].run(" ".join(arg_tokens[1:]))
-            
-        raise CommandNotFoundError("Unknown plugin")
-        

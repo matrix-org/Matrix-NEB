@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="Matrix-NEB",
-    version="0.0.1",
+    version="0.0.2",
     description="A generic bot for Matrix",
     author="Kegan Dougal",
     author_email="kegsay@gmail.com",

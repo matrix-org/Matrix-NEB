@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from neb.engine import Plugin, Command, KeyValueStore
+from neb.engine import KeyValueStore
+from neb.plugins import Plugin
 
 from hashlib import sha1
 import hmac
@@ -9,28 +10,31 @@ import logging as log
 
 
 class GithubPlugin(Plugin):
-    """ Plugin for interacting with Github. Supports webhooks.
-
-    New events:
-        Type: org.matrix.neb.plugin.github.projects.tracking
-        State: Yes
-        Content: {
-            projects: [projectName1, projectName2, ...]
-        }
-
-    Webhooks:
-        /neb/github
+    """Plugin for interacting with Github.
+    github show projects : Show which github projects this bot recognises.
+    github show track|tracking : Show which projects are being tracked.
+    github track "owner/repo" "owner/repo" : Track the given projects.
+    github stop track|tracking : Stop tracking github projects.
+    github color "owner/repo" <branch> <color> : Set the color of notifications for this project.
     """
+    name = "github"
+    #New events:
+    #    Type: org.matrix.neb.plugin.github.projects.tracking
+    #    State: Yes
+    #    Content: {
+    #        projects: [projectName1, projectName2, ...]
+    #    }
 
-    HELP = [
-        "show-projects :: Display which projects this bot has been configured with.",
-        "track-projects name,name2.name3 :: Track when commits are added to the named projects name, name2, name3.",
-        "clear-tracking :: Clears tracked projects from this room.",
-        "color :: Set a color for certain github repos / branches. E.g. color bob/myrepo develop green"
-    ]
+    #Webhooks:
+    #    /neb/github
+    TYPE_TRACK = "org.matrix.neb.plugin.github.projects.tracking"
+    TYPE_COLOR = "org.matrix.neb.plugin.github.projects.color"
 
-    def __init__(self, config="github.json"):
-        self.store = KeyValueStore(config)
+    TRACKING = ["track", "tracking"]
+
+    def __init__(self, *args, **kwargs):
+        super(GithubPlugin, self).__init__(*args, **kwargs)
+        self.store = KeyValueStore("github.json")
 
         if not self.store.has("known_projects"):
             self.store.set("known_projects", [])
@@ -41,38 +45,6 @@ class GithubPlugin(Plugin):
         self.state = {
             # room_id : { projects: [projectName1, projectName2, ...] }
         }
-
-    def get_commands(self):
-        """Return human readable commands with descriptions.
-
-        Returns:
-            list[Command]
-        """
-        return [
-            Command("github", self.github, "Perform commands on github.",
-            GithubPlugin.HELP),
-        ]
-
-    def github(self, event, args):
-        if len(args) == 1:
-            return [self._body(x) for x in GithubPlugin.HELP]
-
-        action = args[1]
-        actions = {
-            "show-projects": self._show_projects,
-            "track-projects": self._track_projects,
-            "clear-tracking": self._clear_tracking,
-            "color": self._color
-        }
-
-        # TODO: make this configurable
-        if event["user_id"] not in self.matrix.config.admins:
-            return self._body("Sorry, only %s can do that." % json.dumps(self.matrix.config.admins))
-
-        try:
-            return actions[action](event, args)
-        except KeyError:
-            return self._body("Unknown Github action: %s" % action)
 
     def on_receive_github_push(self, info):
         log.info("recv %s", info)
@@ -121,58 +93,43 @@ class GithubPlugin(Plugin):
             except KeyError:
                 pass
 
-    def _show_projects(self, event, args):
-        projects = self.store.get("known_projects")
-        return [
-            self._body("Available projects: %s" % json.dumps(projects)),
-        ]
-
-    def _track_projects(self, event, args):
-        project_names_csv = ' '.join(args[2:]).strip()
-        project_names = [a.strip() for a in project_names_csv.split(',')]
-        if not project_names_csv:
-            try:
-                return self._body("Currently tracking %s" %
-                json.dumps(self.state[event["room_id"]]["projects"]))
-            except KeyError:
-                return self._body("Not tracking any projects currently.")
-
-        for key in project_names:
-            if not key in self.store.get("known_projects"):
-                return self._body("Unknown project name: %s." % key)
-
-        self._send_track_event(event["room_id"], project_names)
-
-        return self._body(
-            "Commits for projects %s from will be displayed as they are commited." % (project_names)
-        )
-
-    def _clear_tracking(self, event, args):
-        self._send_track_event(event["room_id"], [])
-        return self._body(
-            "Stopped tracking projects."
-        )
-
-    def _color(self, event, options):
-        branch = None
-        color = None
-        repo = None
-        if options < 3:
-            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
-
-        options = options[2:]
-
-        if len(options) > 3:
-            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
-        elif len(options) == 3:
-            repo = options[0]
-            branch = options[1]
-            color = options[2]
-        elif len(options) == 2:
-            repo = options[0]
-            color = options[1]
+    def cmd_show(self, event, action):
+        """Show information on projects or projects being tracked.
+        Show which projects are being tracked. 'github show tracking'
+        Show which proejcts are recognised so they could be tracked. 'github show projects'
+        """
+        if action == "projects":
+            projects = self.store.get("known_projects")
+            return "Available projects: %s" % json.dumps(projects)
+        elif action in self.TRACKING:
+            return self._get_tracking(event["room_id"])
         else:
-            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
+            return self.cmd_show.__doc__
+
+    def cmd_track(self, event, *args):
+        if len(args) == 0:
+            return self._get_tracking(event["room_id"])
+
+        for project in args:
+            if not project in self.store.get("known_projects"):
+                return "Unknown project name: %s." % project
+
+        self._send_track_event(event["room_id"], args)
+
+        return "Commits for projects %s will be displayed as they are commited." % (args,)
+
+    def cmd_stop(self, event, action):
+        """Stop tracking projects. 'github stop tracking'"""
+        if action in self.TRACKING:
+            self._send_track_event(event["room_id"], [])
+            return "Stopped tracking projects."
+        else:
+            return self.cmd_stop.__doc__
+
+    def cmd_color(self, event, repo, branch, color):
+        """"Set the color of notifications for a project and branch. The color must be hex or an HTML 4 named color.
+        'github color project branch color' e.g. github color bob/repo develop #0000ff
+        """
 
         if not repo in self.store.get("known_projects"):
             return self._body("Unknown github repo: %s" % repo)
@@ -180,9 +137,6 @@ class GithubPlugin(Plugin):
         # basic color validation
         valid = False
         color = color.strip().lower()
-        if len(color) == 0:
-            return self._body("Usage: color username/repo [optional branch] <color> where <color> is hex or an HTML 4 named color.")
-
         if color in ["white","silver","gray","black","red","maroon","yellow","olive","lime","green","aqua","teal","blue","navy","fuchsia","purple"]:
             valid = True
         else:
@@ -209,24 +163,28 @@ class GithubPlugin(Plugin):
     def _send_color_event(self, room_id, repo, branch, color):
         self.matrix.send_event(
             room_id,
-            "org.matrix.neb.plugin.github.projects.color",
+            self.TYPE_COLOR,
             {
                 "projects": project_names
             },
             state=True
         )
-
-
 
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_event(
             room_id,
-            "org.matrix.neb.plugin.github.projects.tracking",
+            self.TYPE_TRACK,
             {
                 "projects": project_names
             },
             state=True
         )
+
+    def _get_tracking(self, room_id):
+        try:
+            return "Currently tracking %s" % json.dumps(self.state[room_id]["projects"])
+        except KeyError:
+            return "Not tracking any projects currently."
 
     def _set_track_event(self, event):
         room_id = event["room_id"]
@@ -241,7 +199,7 @@ class GithubPlugin(Plugin):
             self.state[room_id]["projects"] = []
 
     def on_event(self, event, event_type):
-        if event_type == "org.matrix.neb.plugin.github.projects.tracking":
+        if event_type == self.TYPE_TRACK:
             self._set_track_event(event)
 
     def get_webhook_key(self):
@@ -402,9 +360,7 @@ class GithubPlugin(Plugin):
             "type": push_type
         })
 
-    def on_sync(self, matrix, sync):
-        self.matrix = matrix
-
+    def on_sync(self, sync):
         for room in sync["rooms"]:
             # see if we know anything about these rooms
             room_id = room["room_id"]
@@ -415,7 +371,7 @@ class GithubPlugin(Plugin):
 
             try:
                 for state in room["state"]:
-                    if state["type"] == "org.matrix.neb.plugin.github.projects.tracking":
+                    if state["type"] == self.TYPE_TRACK:
                         self._set_track_event(state)
             except KeyError:
                 pass

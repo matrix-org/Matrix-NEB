@@ -17,9 +17,6 @@ import time
 log = logging.getLogger(name=__name__)
 
 # TODO:
-# - Allow multiple users in one NEB process. Particularly important when rate limiting kicks in. Plugins already
-#   support this because they just operate on the matrix instance given to them.
-# - Async requests in plugins PREASE
 # - Add utility plugins in neb package to do things like "invite x to room y"?
 # - Add other plugins as tests of plugin architecture (e.g. anagrams, dictionary lookup, etc)
 
@@ -75,7 +72,7 @@ def main(config):
         GuessNumberPlugin,
         JiraPlugin,
         UrlPlugin,
-    #   GithubPlugin,
+        GithubPlugin,
         JenkinsPlugin,
     ]
 
