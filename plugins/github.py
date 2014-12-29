@@ -15,7 +15,6 @@ class GithubPlugin(Plugin):
     github show track|tracking : Show which projects are being tracked.
     github track "owner/repo" "owner/repo" : Track the given projects.
     github stop track|tracking : Stop tracking github projects.
-    github color "owner/repo" <branch> <color> : Set the color of notifications for this project.
     """
     name = "github"
     #New events:
@@ -126,7 +125,7 @@ class GithubPlugin(Plugin):
         else:
             return self.cmd_stop.__doc__
 
-    def cmd_color(self, event, repo, branch, color):
+    def xcmd_color(self, event, repo, branch, color):
         """"Set the color of notifications for a project and branch. The color must be hex or an HTML 4 named color.
         'github color project branch color' e.g. github color bob/repo develop #0000ff
         """
