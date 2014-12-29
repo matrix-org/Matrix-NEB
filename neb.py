@@ -76,7 +76,7 @@ def main(config):
         JiraPlugin,
         UrlPlugin,
     #   GithubPlugin,
-    #   JenkinsPlugin,
+        JenkinsPlugin,
     ]
 
     for plugin in plugins:

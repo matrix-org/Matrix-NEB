@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from neb.engine import Plugin, Command, KeyValueStore
+from neb.plugins import Plugin
+from neb.engine import KeyValueStore
 
 import json
 import urlparse
@@ -9,29 +10,31 @@ import logging as log
 
 class JenkinsPlugin(Plugin):
     """ Plugin for receiving Jenkins notifications via the Notification Plugin.
-    https://wiki.jenkins-ci.org/display/JENKINS/Notification+Plugin
-
-    Supports webhooks.
-
-    New events:
-        Type: org.matrix.neb.plugin.jenkins.projects.tracking
-        State: Yes
-        Content: {
-            projects: [projectName1, projectName2, ...]
-        }
-
-    Webhooks:
-        /neb/jenkins
+    jenkins show projects : Display which projects this bot recognises.
+    jenkins show track|tracking : Display which projects this bot is tracking.
+    jenkins track project1 project2 ... : Track Jenkins notifications for the named projects.
+    jenkins stop track|tracking : Stop tracking Jenkins notifications.
     """
+    name = "jenkins"
 
-    HELP = [
-        "show-projects :: Display which projects this bot has been configured with.",
-        "track-projects name,name2.name3 :: Track Jenkins notifications for named projects name, name2, name3.",
-        "clear-tracking :: Clears tracked projects from this room."
-    ]
+    # https://wiki.jenkins-ci.org/display/JENKINS/Notification+Plugin
 
-    def __init__(self, config="jenkins.json"):
-        self.store = KeyValueStore(config)
+    #New events:
+    #    Type: org.matrix.neb.plugin.jenkins.projects.tracking
+    #    State: Yes
+    #    Content: {
+    #        projects: [projectName1, projectName2, ...]
+    #    }
+
+    #Webhooks:
+    #    /neb/jenkins
+
+    TRACKING = ["track", "tracking"]
+    TYPE_TRACK = "org.matrix.neb.plugin.jenkins.projects.tracking"
+
+    def __init__(self, *args, **kwargs):
+        super(JenkinsPlugin, self).__init__(*args, **kwargs)
+        self.store = KeyValueStore("jenkins.json")
 
         if not self.store.has("known_projects"):
             self.store.set("known_projects", [])
@@ -47,73 +50,55 @@ class JenkinsPlugin(Plugin):
             # projectName:branch: { commit:x }
         }
 
-    def get_commands(self):
-        """Return human readable commands with descriptions.
-
-        Returns:
-            list[Command]
+    def cmd_show(self, event, action):
+        """Show information on projects or projects being tracked.
+        Show which projects are being tracked. 'jenkins show tracking'
+        Show which proejcts are recognised so they could be tracked. 'jenkins show projects'
         """
-        return [
-            Command("jenkins", self.jenkins, "Listen for Jenkins notifications.",
-            JenkinsPlugin.HELP),
-        ]
+        if action in self.TRACKING:
+            return self._get_tracking(event["room_id"])
+        elif action == "projects":
+            projects = self.store.get("known_projects")
+            return [
+                self._body("Available projects: %s" % json.dumps(projects)),
+            ]
+        else:
+            return "Invalid arg '%s'.\n %s" % (action, self.cmd_show.__doc__)
 
-    def jenkins(self, event, args):
-        if len(args) == 1:
-            return [self._body(x) for x in JenkinsPlugin.HELP]
+    def cmd_track(self, event, *args):
+        """Track projects. 'jenkins track Foo "bar with spaces"'"""
+        if len(args) == 0:
+            return self._get_tracking(event["room_id"])
 
-        action = args[1]
-        actions = {
-            "show-projects": self._show_projects,
-            "track-projects": self._track_projects,
-            "clear-tracking": self._clear_tracking
-        }
+        for project in args:
+            if not project in self.store.get("known_projects"):
+                return self._body("Unknown project name: %s." % project)
 
-        # TODO: make this configurable
-        if event["user_id"] not in self.matrix.config.admins:
-            return self._body("Sorry, only %s can do that." % json.dumps(self.matrix.config.admins))
+        self._send_track_event(event["room_id"], args)
 
+        return self._body(
+            "Jenkins notifications for projects %s will be displayed when they fail." % (args)
+        )
+
+    def cmd_stop(self, event, action):
+        """Stop tracking projects. 'jenkins stop tracking'"""
+        if action in self.TRACKING:
+            self._send_track_event(event["room_id"], [])
+            return "Stopped tracking projects."
+        else:
+            return "Invalid arg '%s'.\n %s" % (action, self.cmd_stop.__doc__)
+
+    def _get_tracking(self, room_id):
         try:
-            return actions[action](event, args)
+            return self._body("Currently tracking %s" %
+            json.dumps(self.state[room_id]["projects"]))
         except KeyError:
-            return self._body("Unknown Jenkins action: %s" % action)
-
-    def _show_projects(self, event, args):
-        projects = self.store.get("known_projects")
-        return [
-            self._body("Available projects: %s" % json.dumps(projects)),
-        ]
-
-    def _track_projects(self, event, args):
-        project_names_csv = ' '.join(args[2:]).strip()
-        project_names = [a.strip() for a in project_names_csv.split(',')]
-        if not project_names_csv:
-            try:
-                return self._body("Currently tracking %s" %
-                json.dumps(self.state[event["room_id"]]["projects"]))
-            except KeyError:
-                return self._body("Not tracking any projects currently.")
-
-        for key in project_names:
-            if not key in self.store.get("known_projects"):
-                return self._body("Unknown project name: %s." % key)
-
-        self._send_track_event(event["room_id"], project_names)
-
-        return self._body(
-            "Jenkins notifications for projects %s will be displayed when they fail." % (project_names)
-        )
-
-    def _clear_tracking(self, event, args):
-        self._send_track_event(event["room_id"], [])
-        return self._body(
-            "Stopped tracking projects."
-        )
+            return self._body("Not tracking any projects currently.")
 
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_event(
             room_id,
-            "org.matrix.neb.plugin.jenkins.projects.tracking",
+            self.TYPE_TRACK,
             {
                 "projects": project_names
             },
@@ -145,12 +130,10 @@ class JenkinsPlugin(Plugin):
             self.state[room_id]["projects"] = []
 
     def on_event(self, event, event_type):
-        if event_type == "org.matrix.neb.plugin.jenkins.projects.tracking":
+        if event_type == self.TYPE_TRACK:
             self._set_track_event(event)
 
-    def on_sync(self, matrix, sync):
-        self.matrix = matrix
-
+    def on_sync(self, sync):
         for room in sync["rooms"]:
             # see if we know anything about these rooms
             room_id = room["room_id"]
@@ -161,7 +144,7 @@ class JenkinsPlugin(Plugin):
 
             try:
                 for state in room["state"]:
-                    if state["type"] == "org.matrix.neb.plugin.jenkins.projects.tracking":
+                    if state["type"] == self.TYPE_TRACK:
                         self._set_track_event(state)
             except KeyError:
                 pass
