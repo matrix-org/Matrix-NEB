@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from neb.plugins import Plugin
+from neb.plugins import Plugin, admin_only
 from neb.engine import KeyValueStore
 
 import json
@@ -65,6 +65,7 @@ class JenkinsPlugin(Plugin):
         else:
             return "Invalid arg '%s'.\n %s" % (action, self.cmd_show.__doc__)
 
+    @admin_only
     def cmd_track(self, event, *args):
         """Track projects. 'jenkins track Foo "bar with spaces"'"""
         if len(args) == 0:
@@ -80,6 +81,7 @@ class JenkinsPlugin(Plugin):
             "Jenkins notifications for projects %s will be displayed when they fail." % (args)
         )
 
+    @admin_only
     def cmd_stop(self, event, action):
         """Stop tracking projects. 'jenkins stop tracking'"""
         if action in self.TRACKING:

@@ -1,5 +1,5 @@
 from neb.engine import KeyValueStore
-from neb.plugins import Plugin
+from neb.plugins import Plugin, admin_only
 
 import getpass
 import json
@@ -57,6 +57,7 @@ class JiraPlugin(Plugin):
         self.auth = (self.store.get("user"), self.store.get("pass"))
         self.regex = re.compile(r"\b(([A-Za-z]+)-\d+)\b")
 
+    @admin_only
     def cmd_stop(self, event, action):
         """ Clear project keys from tracking/expanding.
         Stop tracking projects. 'jira stop tracking'
@@ -73,6 +74,7 @@ class JiraPlugin(Plugin):
         else:
             return "Invalid arg '%s'.\n %s" % (action, self.cmd_stop.__doc__)
 
+    @admin_only
     def cmd_track(self, event, *args):
         """Track project keys. 'jira track FOO BAR'"""
         if not args:
@@ -88,6 +90,7 @@ class JiraPlugin(Plugin):
         url = self.store.get("url")
         return "Issues for projects %s from %s will be displayed as they are updated." % (args, url)
 
+    @admin_only
     def cmd_expand(self, event, *args):
         """Expand issues when mentioned for the given project keys. 'jira expand FOO BAR'"""
         if not args:

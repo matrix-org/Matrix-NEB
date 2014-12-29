@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from neb.engine import KeyValueStore
-from neb.plugins import Plugin
+from neb.plugins import Plugin, admin_only
 
 from hashlib import sha1
 import hmac
@@ -105,6 +105,7 @@ class GithubPlugin(Plugin):
         else:
             return self.cmd_show.__doc__
 
+    @admin_only
     def cmd_track(self, event, *args):
         if len(args) == 0:
             return self._get_tracking(event["room_id"])
@@ -117,6 +118,7 @@ class GithubPlugin(Plugin):
 
         return "Commits for projects %s will be displayed as they are commited." % (args,)
 
+    @admin_only
     def cmd_stop(self, event, action):
         """Stop tracking projects. 'github stop tracking'"""
         if action in self.TRACKING:

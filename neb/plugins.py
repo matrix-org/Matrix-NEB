@@ -8,14 +8,17 @@
 #   send_message(foo, bar)
 
 import inspect
+import json
 import re
 import shlex
-import urllib
 
 
 def admin_only(fn):
     def wrapped(*args, **kwargs):
-        print "admin only check -> %s" % args[0].matrix_api
+        matrix = args[0].matrix
+        event = args[1]
+        if event["user_id"] not in matrix.config.admins:
+            return "Sorry, only %s can do that." % json.dumps(matrix.config.admins)
         result = fn(*args, **kwargs)
         return result
     return wrapped
@@ -61,13 +64,6 @@ class PluginInterface(object):
 
 
 class Plugin(PluginInterface):
-
-    def open(self, url, content=None):
-        log.debug("[Plugin]url >>> %s  >>>> %s" % (url, content))
-        response = urllib.urlopen(url, data=content)
-        if response.code != 200:
-            raise NebError("Request to %s failed: %s" % (url, response.code))
-        return response.read()
 
     def _body(self, text):
         return {
