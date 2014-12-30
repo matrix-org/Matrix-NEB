@@ -67,13 +67,32 @@ class GithubPlugin(Plugin):
             # form the template:
             # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
             # 1<=3 of <branch name> <short hash> <full username>: <comment>
-            push_message = "[%s] %s pushed to <b>%s</b>: %s  - %s" % (
-                info["repo"],
-                info["commit_username"],
-                info["branch"],
-                info["commit_msg"],
-                info["commit_link"]
-            )
+            if info["num_commits"] == 1:
+                push_message = "[%s] %s pushed to <b>%s</b>: %s  - %s" % (
+                    info["repo"],
+                    info["commit_username"],
+                    info["branch"],
+                    info["commit_msg"],
+                    info["commit_link"]
+                )
+            else:
+                summary = ""
+                max_commits = 3
+                count = 0
+                for c in info["commits_summary"]:
+                    if count == max_commits:
+                        break
+                    summary += "\n%s: %s" % (c["author"], c["summary"])
+                    count += 1
+
+                push_message = "[%s] %s pushed %s commits to <b>%s</b>: %s %s" % (
+                    info["repo"],
+                    info["commit_username"],
+                    info["num_commits"],
+                    info["branch"],
+                    info["commit_link"],
+                    summary
+                )
         else:
             log.warn("Unknown push type. %s", info["type"])
             return
@@ -350,6 +369,23 @@ class GithubPlugin(Plugin):
             # possible if they haven't tied up with a github account
             commit_uname = commit_name
 
+        # look for multiple commits
+        num_commits = 1
+        commits_summary = []
+        if "commits" in j and len(j["commits"]) > 1:
+            num_commits = len(j["commits"])
+            for c in j["commits"]:
+                cname = None
+                try:
+                    cname = c["author"]["username"]
+                except:
+                    cname = c["author"]["name"]
+                commits_summary.append({
+                    "author": cname,
+                    "summary": c["message"]
+                })
+
+
         self.on_receive_github_push({
             "branch": branch,
             "repo": repo_name,
@@ -358,7 +394,9 @@ class GithubPlugin(Plugin):
             "commit_name": commit_name,
             "commit_link": commit_link,
             "commit_hash": short_hash,
-            "type": push_type
+            "type": push_type,
+            "num_commits": num_commits,
+            "commits_summary": commits_summary
         })
 
     def on_sync(self, sync):
