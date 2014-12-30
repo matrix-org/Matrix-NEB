@@ -236,7 +236,7 @@ class GithubPlugin(Plugin):
 
         user = data["sender"]["login"]
 
-        msg = "[%s] %s %s pull request #%s: %s [%s] - %s" % (
+        msg = "[%s] %s %s <b>pull request #%s</b>: %s [%s] - %s" % (
             repo_name,
             user,
             action,
@@ -272,6 +272,28 @@ class GithubPlugin(Plugin):
             projects = self.store.get("known_projects")
             projects.append(repo_name)
             self.store.set("known_projects", projects)
+
+    def on_receive_comment(self, data):
+        repo_name = data["repository"]["full_name"]
+        issue = data["issue"]
+        comment = data["comment"]
+        is_pull_request = "pull_request" in issue
+        if not is_pull_request:
+            return  # don't bother displaying issue comments
+
+        pr_title = issue["title"]
+        pr_num = issue["number"]
+        comment_url = comment["html_url"]
+        username = comment["user"]["login"]
+
+        msg = "[%s] %s commented on <b>pull request #%s</b>: %s - %s" % (
+            repo_name,
+            username,
+            pr_num,
+            pr_title,
+            comment_url
+        )
+        self.send_message_to_repos(repo_name, msg)
 
 
     def on_receive_issue(self, data):
@@ -337,6 +359,9 @@ class GithubPlugin(Plugin):
             return
         elif event_type == "ping":
             self.on_receive_ping(json.loads(data))
+            return
+        elif event_type == "issue_comment":  # INCLUDES PR COMMENTS!!!
+            self.on_receive_comment(json.loads(data))
             return
 
         j = json.loads(data)
