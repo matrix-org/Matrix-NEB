@@ -8,6 +8,7 @@ from plugins.guess_number import GuessNumberPlugin
 from plugins.jenkins import JenkinsPlugin
 from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
+from plugins.time import TimePlugin
 from plugins.github import GithubPlugin
 
 import logging
@@ -67,7 +68,7 @@ def main(config):
 
     log.debug("Setting up plugins...")
     plugins = [
-    #    TumblrPlugin,
+        TimePlugin,
         Base64Plugin,
         GuessNumberPlugin,
         JiraPlugin,

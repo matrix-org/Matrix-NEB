@@ -12,6 +12,8 @@ import json
 import re
 import shlex
 
+import logging as log
+
 
 def admin_only(fn):
     def wrapped(*args, **kwargs):
@@ -113,7 +115,7 @@ class Plugin(PluginInterface):
                     else:
                         return method()
                 except TypeError as e:
-                    print e
+                    log.exception(e)
                     raise CommandNotFoundError(method.__doc__)
 
         raise CommandNotFoundError("Unknown command")

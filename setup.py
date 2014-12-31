@@ -13,7 +13,8 @@ setup(
     install_requires = [
         "pytumblr",
         "requests",
-        "Flask"
+        "Flask",
+        "python-dateutil"
     ],
     dependency_links=[
         "git+ssh://git@github.com/tumblr/pytumblr.git",
