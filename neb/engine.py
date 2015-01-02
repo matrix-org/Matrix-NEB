@@ -224,7 +224,7 @@ class RoomContextStore(object):
             except KeyError:
                 pass
 
-        log.debug(pprint.pprint(self.state))
+        log.debug(pprint.pformat(self.state))
 
 
 class KeyValueStore(object):
