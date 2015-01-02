@@ -185,6 +185,9 @@ class RoomContextStore(object):
         except KeyError:
             pass
 
+    def get_room_ids(self):
+        return self.state.keys()
+
     def update(self, event):
         try:
             room_id = event["room_id"]

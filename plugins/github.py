@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from neb.engine import KeyValueStore
+from neb.engine import KeyValueStore, RoomContextStore
 from neb.plugins import Plugin, admin_only
 
 from hashlib import sha1
@@ -34,16 +34,15 @@ class GithubPlugin(Plugin):
     def __init__(self, *args, **kwargs):
         super(GithubPlugin, self).__init__(*args, **kwargs)
         self.store = KeyValueStore("github.json")
+        self.rooms = RoomContextStore(
+            [GithubPlugin.TYPE_TRACK]
+        )
 
         if not self.store.has("known_projects"):
             self.store.set("known_projects", [])
 
         if not self.store.has("secret_token"):
             self.store.set("secret_token", "")
-
-        self.state = {
-            # room_id : { projects: [projectName1, projectName2, ...] }
-        }
 
     def on_receive_github_push(self, info):
         log.info("recv %s", info)
@@ -101,9 +100,9 @@ class GithubPlugin(Plugin):
 
     def send_message_to_repos(self, repo, push_message):
         # send messages to all rooms registered with this project.
-        for (room_id, room_info) in self.state.iteritems():
+        for room_id in self.rooms.get_room_ids():
             try:
-                if repo in room_info["projects"]:
+                if repo in self.rooms.get_content(room_id, GithubPlugin.TYPE_TRACK)["projects"]:
                     self.matrix.send_message(
                         room_id,
                         self.matrix._rich_body(push_message)
@@ -175,21 +174,6 @@ class GithubPlugin(Plugin):
 
         return "Not yet implemented. Valid. Repo=%s Branch=%s Color=%s" % (repo, branch, color)
 
- #       color_list = self.store.get("project_colors")
- #       color_list
-
- #       self._send_color_event(event["room_id"], repo, branch, color)
-
-    def _send_color_event(self, room_id, repo, branch, color):
-        self.matrix.send_event(
-            room_id,
-            self.TYPE_COLOR,
-            {
-                "projects": project_names
-            },
-            state=True
-        )
-
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_event(
             room_id,
@@ -202,25 +186,18 @@ class GithubPlugin(Plugin):
 
     def _get_tracking(self, room_id):
         try:
-            return "Currently tracking %s" % json.dumps(self.state[room_id]["projects"])
+            return ("Currently tracking %s" % json.dumps(
+                self.rooms.get_content(room_id, GithubPlugin.TYPE_TRACK)["projects"]
+            ))
         except KeyError:
             return "Not tracking any projects currently."
 
-    def _set_track_event(self, event):
-        room_id = event["room_id"]
-        projects = event["content"]["projects"]
-
-        if room_id not in self.state:
-            self.state[room_id] = {}
-
-        if type(projects) == list:
-            self.state[room_id]["projects"] = projects
-        else:
-            self.state[room_id]["projects"] = []
-
     def on_event(self, event, event_type):
-        if event_type == self.TYPE_TRACK:
-            self._set_track_event(event)
+        self.rooms.update(event)
+
+    def on_sync(self, sync):
+        log.debug("Plugin: Github sync state:")
+        self.rooms.init_from_sync(sync)
 
     def get_webhook_key(self):
         return "github"
@@ -423,24 +400,3 @@ class GithubPlugin(Plugin):
             "num_commits": num_commits,
             "commits_summary": commits_summary
         })
-
-    def on_sync(self, sync):
-        for room in sync["rooms"]:
-            # see if we know anything about these rooms
-            room_id = room["room_id"]
-            if room["membership"] != "join":
-                continue
-
-            self.state[room_id] = {}
-
-            try:
-                for state in room["state"]:
-                    if state["type"] == self.TYPE_TRACK:
-                        self._set_track_event(state)
-            except KeyError:
-                pass
-
-        log.debug("Plugin: GitHub Sync state:")
-        log.debug(json.dumps(self.state, indent=4))
-
-

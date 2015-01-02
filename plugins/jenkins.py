@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from neb.plugins import Plugin, admin_only
-from neb.engine import KeyValueStore
+from neb.engine import KeyValueStore, RoomContextStore
 
 import json
 import urlparse
@@ -35,16 +35,15 @@ class JenkinsPlugin(Plugin):
     def __init__(self, *args, **kwargs):
         super(JenkinsPlugin, self).__init__(*args, **kwargs)
         self.store = KeyValueStore("jenkins.json")
+        self.rooms = RoomContextStore(
+            [JenkinsPlugin.TYPE_TRACK]
+        )
 
         if not self.store.has("known_projects"):
             self.store.set("known_projects", [])
 
         if not self.store.has("secret_token"):
             self.store.set("secret_token", "")
-
-        self.state = {
-            # room_id : { projects: [projectName1, projectName2, ...] }
-        }
 
         self.failed_builds = {
             # projectName:branch: { commit:x }
@@ -89,7 +88,10 @@ class JenkinsPlugin(Plugin):
     def _get_tracking(self, room_id):
         try:
             return ("Currently tracking %s" %
-            json.dumps(self.state[room_id]["projects"]))
+                json.dumps(self.rooms.get_content(
+                    room_id, JenkinsPlugin.TYPE_TRACK)["projects"]
+                )
+            )
         except KeyError:
             return "Not tracking any projects currently."
 
@@ -105,9 +107,10 @@ class JenkinsPlugin(Plugin):
 
     def send_message_to_repos(self, repo, push_message):
         # send messages to all rooms registered with this project.
-        for (room_id, room_info) in self.state.iteritems():
+        for room_id in self.rooms.get_room_ids():
             try:
-                if repo in room_info["projects"]:
+                if (repo in self.rooms.get_content(
+                        room_id, JenkinsPlugin.TYPE_TRACK)["projects"]):
                     self.matrix.send_message(
                         room_id,
                         self.matrix._rich_body(push_message)
@@ -115,40 +118,12 @@ class JenkinsPlugin(Plugin):
             except KeyError:
                 pass
 
-    def _set_track_event(self, event):
-        room_id = event["room_id"]
-        projects = event["content"]["projects"]
-
-        if room_id not in self.state:
-            self.state[room_id] = {}
-
-        if type(projects) == list:
-            self.state[room_id]["projects"] = projects
-        else:
-            self.state[room_id]["projects"] = []
-
     def on_event(self, event, event_type):
-        if event_type == self.TYPE_TRACK:
-            self._set_track_event(event)
+        self.rooms.update(event)
 
     def on_sync(self, sync):
-        for room in sync["rooms"]:
-            # see if we know anything about these rooms
-            room_id = room["room_id"]
-            if room["membership"] != "join":
-                continue
-
-            self.state[room_id] = {}
-
-            try:
-                for state in room["state"]:
-                    if state["type"] == self.TYPE_TRACK:
-                        self._set_track_event(state)
-            except KeyError:
-                pass
-
-        log.debug("Plugin: Jenkins Sync state:")
-        log.debug(json.dumps(self.state, indent=4))
+        log.debug("Plugin: Jenkins sync state:")
+        self.rooms.init_from_sync(sync)
 
     def get_webhook_key(self):
         return "jenkins"

@@ -199,7 +199,7 @@ class JiraPlugin(Plugin):
                        info["key"], info["summary"], link)
 
         # send messages to all rooms registered with this project.
-        for (room_id, room_info) in self.rooms.state.iteritems():
+        for room_id in self.rooms.get_room_ids():
             try:
                 content = self.rooms.get_content(room_id, JiraPlugin.TYPE_TRACK)
                 if project in content["projects"]:
@@ -208,7 +208,7 @@ class JiraPlugin(Plugin):
                 pass
 
     def on_sync(self, sync):
-        log.debug("Plugin: JIRA Sync state:")
+        log.debug("Plugin: JIRA sync state:")
         self.rooms.init_from_sync(sync)
 
     def _get_issue_info(self, issue_key):
