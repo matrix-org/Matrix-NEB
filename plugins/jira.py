@@ -1,4 +1,4 @@
-from neb.engine import KeyValueStore
+from neb.engine import KeyValueStore, RoomContextStore
 from neb.plugins import Plugin, admin_only
 
 import getpass
@@ -36,6 +36,9 @@ class JiraPlugin(Plugin):
     def __init__(self, *args, **kwargs):
         super(JiraPlugin, self).__init__(*args, **kwargs)
         self.store = KeyValueStore("jira.json")
+        self.rooms = RoomContextStore(
+            [JiraPlugin.TYPE_TRACK, JiraPlugin.TYPE_EXPAND]
+        )
 
         if not self.store.has("url"):
             url = raw_input("JIRA URL: ").strip()
@@ -47,13 +50,6 @@ class JiraPlugin(Plugin):
             self.store.set("user", user)
             self.store.set("pass", pw)
 
-        self.state = {
-            # room_id : {
-            #   expanding: [projectKey1, projectKey2, ...],
-            #   tracking: [projectKey1, projecyKey2, ...]
-            # }
-        }
-
         self.auth = (self.store.get("user"), self.store.get("pass"))
         self.regex = re.compile(r"\b(([A-Za-z]+)-\d+)\b")
 
@@ -64,11 +60,11 @@ class JiraPlugin(Plugin):
         Stop expanding projects. 'jira stop expanding'
         """
         if action in self.TRACK:
-            self._send_tracking(event["room_id"], [])
+            self._send_state(JiraPlugin.TYPE_TRACK, event["room_id"], [])
             url = self.store.get("url")
             return "Stopped tracking project keys from %s." % (url)
         elif action in self.EXPAND:
-            self._send_expanding(event["room_id"], [])
+            self._send_state(JiraPlugin.TYPE_EXPAND, event["room_id"], [])
             url = self.store.get("url")
             return "Stopped expanding project keys from %s." % (url)
         else:
@@ -85,7 +81,7 @@ class JiraPlugin(Plugin):
             if re.search("[^A-Z]", key):  # something not A-Z
                 return "Key %s isn't a valid project key." % key
 
-        self._send_tracking(event["room_id"], args)
+        self._send_state(JiraPlugin.TYPE_TRACK, event["room_id"], args)
 
         url = self.store.get("url")
         return "Issues for projects %s from %s will be displayed as they are updated." % (args, url)
@@ -101,7 +97,7 @@ class JiraPlugin(Plugin):
             if re.search("[^A-Z]", key):  # something not A-Z
                 return "Key %s isn't a valid project key." % key
 
-        self._send_expanding(event["room_id"], args)
+        self._send_state(JiraPlugin.TYPE_EXPAND, event["room_id"], args)
 
         url = self.store.get("url")
         return "Issues for projects %s from %s will be expanded as they are mentioned." % (args, url)
@@ -129,30 +125,34 @@ class JiraPlugin(Plugin):
 
     def _get_tracking(self, room_id):
         try:
-            return "Currently tracking %s" % json.dumps(self.state[room_id]["tracking"])
+            return ("Currently tracking %s" %
+                json.dumps(
+                    self.rooms.get_content(
+                        room_id,
+                        JiraPlugin.TYPE_TRACK
+                    )["projects"]
+                )
+            )
         except KeyError:
             return "Not tracking any projects currently."
 
     def _get_expanding(self, room_id):
         try:
-            return "Currently expanding %s" % json.dumps(self.state[room_id]["expanding"])
+            return ("Currently expanding %s" %
+                json.dumps(
+                    self.rooms.get_content(
+                        room_id,
+                        JiraPlugin.TYPE_EXPAND
+                    )["projects"]
+                )
+            )
         except KeyError:
             return "Not expanding any projects currently."
 
-    def _send_tracking(self, room_id, project_keys):
+    def _send_state(self, etype, room_id, project_keys):
         self.matrix.send_event(
             room_id,
-            self.TYPE_TRACK,
-            {
-                "projects": project_keys
-            },
-            state=True
-        )
-
-    def _send_expanding(self, room_id, project_keys):
-        self.matrix.send_event(
-            room_id,
-            self.TYPE_EXPAND,
+            etype,
             {
                 "projects": project_keys
             },
@@ -168,7 +168,9 @@ class JiraPlugin(Plugin):
 
         projects = []
         try:
-            projects = self.state[room_id]["expanding"]
+            projects = self.rooms.get_content(
+                    room_id, JiraPlugin.TYPE_EXPAND
+                )["projects"]
         except KeyError:
             return
 
@@ -185,8 +187,7 @@ class JiraPlugin(Plugin):
                     log.exception(e)
 
     def on_event(self, event, event_type):
-        if event_type == self.TYPE_TRACK or event_type == self.TYPE_EXPAND:
-            self._set_from_event(event)
+        self.rooms.update(event)
 
     def on_receive_jira_push(self, info):
         log.debug("on_recv %s", info)
@@ -198,52 +199,17 @@ class JiraPlugin(Plugin):
                        info["key"], info["summary"], link)
 
         # send messages to all rooms registered with this project.
-        for (room_id, room_info) in self.state.iteritems():
+        for (room_id, room_info) in self.rooms.state.iteritems():
             try:
-                if project in room_info["tracking"]:
+                content = self.rooms.get_content(room_id, JiraPlugin.TYPE_TRACK)
+                if project in content["projects"]:
                     self.matrix.send_message(room_id, self.matrix._body(push_message))
             except KeyError:
                 pass
 
-    def _set_from_event(self, event):
-        room_id = event["room_id"]
-        issues = event["content"]["projects"]
-        key = None
-        if event["type"] == self.TYPE_TRACK:
-            key = "tracking"
-        elif event["type"] == self.TYPE_EXPAND:
-            key = "expanding"
-
-        if not key:
-            return
-
-        if room_id not in self.state:
-            self.state[room_id] = {}
-
-        if type(issues) == list:
-            self.state[room_id][key] = issues
-        else:
-            self.state[room_id][key] = []
-
     def on_sync(self, sync):
-
-        for room in sync["rooms"]:
-            # see if we know anything about these rooms
-            room_id = room["room_id"]
-            if room["membership"] != "join":
-                continue
-
-            self.state[room_id] = {}
-
-            try:
-                for state in room["state"]:
-                    if state["type"] in [self.TYPE_TRACK, self.TYPE_EXPAND]:
-                        self._set_from_event(state)
-            except KeyError:
-                pass
-
         log.debug("Plugin: JIRA Sync state:")
-        log.debug(json.dumps(self.state, indent=4))
+        self.rooms.init_from_sync(sync)
 
     def _get_issue_info(self, issue_key):
         url = self._url("/rest/api/2/issue/%s" % issue_key)

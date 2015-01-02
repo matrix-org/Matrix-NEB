@@ -4,6 +4,7 @@ from neb.webhook import NebHookServer
 
 import json
 import logging as log
+import pprint
 
 
 class Engine(object):
@@ -164,14 +165,42 @@ class Engine(object):
 class RoomContextStore(object):
     """Stores state events for rooms."""
 
-    def __init__(self, event_types):
+    def __init__(self, event_types, content_only=True):
         """Init the store.
 
         Args:
             event_types(list<str>): The state event types to store.
+            content_only(bool): True to only store the content for state events.
         """
         self.state = {}
         self.types = event_types
+        self.content_only = content_only
+
+    def get_content(self, room_id, event_type, key=""):
+        try:
+            if self.content_only:
+                return self.state[room_id][(event_type, key)]
+            else:
+                return self.state[room_id][(event_type, key)]["content"]
+        except KeyError:
+            pass
+
+    def update(self, event):
+        try:
+            room_id = event["room_id"]
+            etype = event["type"]
+            if etype in self.types:
+                if room_id not in self.state:
+                    self.state[room_id] = {}
+                key = (etype, event["state_key"])
+
+                s = event
+                if self.content_only:
+                    s = event["content"]
+
+                self.state[room_id][key] = s
+        except KeyError:
+            pass
 
     def init_from_sync(self, sync):
         for room in sync["rooms"]:
@@ -186,11 +215,16 @@ class RoomContextStore(object):
                 for state in room["state"]:
                     if state["type"] in self.types:
                         key = (state["type"], state["state_key"])
-                        self.state[room_id][key] = state
+
+                        s = state
+                        if self.content_only:
+                            s = state["content"]
+
+                        self.state[room_id][key] = s
             except KeyError:
                 pass
 
-        log.debug(json.dumps(self.state, indent=4))
+        log.debug(pprint.pprint(self.state))
 
 
 class KeyValueStore(object):
