@@ -177,13 +177,10 @@ class RoomContextStore(object):
         self.content_only = content_only
 
     def get_content(self, room_id, event_type, key=""):
-        try:
-            if self.content_only:
-                return self.state[room_id][(event_type, key)]
-            else:
-                return self.state[room_id][(event_type, key)]["content"]
-        except KeyError:
-            pass
+        if self.content_only:
+            return self.state[room_id][(event_type, key)]
+        else:
+            return self.state[room_id][(event_type, key)]["content"]
 
     def get_room_ids(self):
         return self.state.keys()
