@@ -9,7 +9,6 @@
 
 import inspect
 import json
-import re
 import shlex
 
 import logging as log
@@ -32,23 +31,46 @@ class CommandNotFoundError(Exception):
 
 class PluginInterface(object):
 
-    def __init__(self, matrix_api, matrix_endpoint, web_hook_server):
+    def __init__(self, matrix_api, web_hook_server):
         self.matrix = matrix_api
-        self.endpoint = matrix_endpoint
+        self.webhook = web_hook_server
 
     def run(self, event, arg_str):
+        """Run the requested command.
+
+        Args:
+            event(dict): The raw event
+            arg_str(list<str>): The parsed arguments from the event
+        Returns:
+            str: The message to respond with.
+            list<str>: The messages to respond with.
+            dict : The m.room.message content to respond with.
+        """
         pass
 
     def on_sync(self, response):
+        """Received initial sync results.
+
+        Args:
+            response(dict): The raw initialSync response.
+        """
         pass
 
-    def on_event(self, event, etype):
+    def on_event(self, event, event_type):
+        """Received an event.
+
+        Args:
+            event(dict): The raw event
+            event_type(str): The event type
+        """
         pass
 
     def on_msg(self, event, body):
+        """Received an m.room.message event."""
         pass
 
     def get_webhook_key(self):
+        """Return a string for a webhook path if a webhook is required."""
         pass
 
     def on_receive_webhook(self, data, ip, headers):
@@ -66,22 +88,6 @@ class PluginInterface(object):
 
 
 class Plugin(PluginInterface):
-
-    def _body(self, text):
-        return {
-            "msgtype": "m.text",
-            "body": text
-        }
-
-    def _rich_body(self, html):
-        return {
-            "body": re.sub('<[^<]+?>', '', html),
-            "msgtype": "m.text",
-            "format": "org.matrix.custom.html",
-            "formatted_body": html
-        }
-
-    # =========================
 
     def run(self, event, arg_str):
         args_array = shlex.split(arg_str.encode("utf8"))

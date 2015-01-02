@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import argparse
 
+from neb.engine import Engine
 from neb.matrix import Matrix, MatrixConfig
-from plugins.tumblr import TumblrPlugin
 from plugins.b64 import Base64Plugin
 from plugins.guess_number import GuessNumberPlugin
 from plugins.jenkins import JenkinsPlugin
@@ -58,12 +58,13 @@ def configure_logging(logfile):
 
         # rotate logs (20MB, max 6 = 120MB)
         handler = logging.handlers.RotatingFileHandler(
-              logfile, maxBytes=(1000*1000*20), backupCount=5)
+              logfile, maxBytes=(1000 * 1000 * 20), backupCount=5)
         handler.setFormatter(formatter)
         logging.getLogger('').addHandler(handler)
 
 
 def main(config):
+    # setup api/endpoint
     matrix = Matrix(config)
 
     log.debug("Setting up plugins...")
@@ -77,15 +78,17 @@ def main(config):
         JenkinsPlugin,
     ]
 
+    # setup engine
+    engine = Engine(matrix)
     for plugin in plugins:
-        matrix.add_plugin(plugin)
+        engine.add_plugin(plugin)
 
-    matrix.setup()
+    engine.setup()
 
     while True:
         try:
             log.info("Listening for incoming events.")
-            matrix.event_loop()
+            engine.event_loop()
         except Exception as e:
             log.error("Ruh roh: %s", e)
         time.sleep(5)
@@ -115,12 +118,13 @@ if __name__ == '__main__':
         if not config:
             log.info("Setting up for an existing account.")
             print "Config file could not be loaded."
-            print "NEB works with an existing Matrix account. Please set up an account for NEB if you haven't already.'"
+            print ("NEB works with an existing Matrix account. "
+                "Please set up an account for NEB if you haven't already.'")
             print "The config for this account will be saved to '%s'" % args.config
             hsurl = raw_input("Home server URL (e.g. http://localhost:8008): ").strip()
             if hsurl.endswith("/"):
                 hsurl = hsurl[:-1]
-            hsurl = hsurl + "/_matrix/client/api/v1" # v1 compatibility
+            hsurl = hsurl + "/_matrix/client/api/v1"  # v1 compatibility
             username = raw_input("Full user ID (e.g. @user:domain): ").strip()
             token = raw_input("Access token: ").strip()
             config = generate_config(hsurl, username, token, args.config)

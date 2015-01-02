@@ -83,7 +83,7 @@ class JiraPlugin(Plugin):
         args = [k.upper() for k in args]
         for key in args:
             if re.search("[^A-Z]", key):  # something not A-Z
-                return self._body("Key %s isn't a valid project key." % key)
+                return "Key %s isn't a valid project key." % key
 
         self._send_tracking(event["room_id"], args)
 
@@ -99,7 +99,7 @@ class JiraPlugin(Plugin):
         args = [k.upper() for k in args]
         for key in args:
             if re.search("[^A-Z]", key):  # something not A-Z
-                return self._body("Key %s isn't a valid project key." % key)
+                return "Key %s isn't a valid project key." % key
 
         self._send_expanding(event["room_id"], args)
 
@@ -129,15 +129,15 @@ class JiraPlugin(Plugin):
 
     def _get_tracking(self, room_id):
         try:
-            return self._body("Currently tracking %s" % json.dumps(self.state[room_id]["tracking"]))
+            return "Currently tracking %s" % json.dumps(self.state[room_id]["tracking"])
         except KeyError:
-            return self._body("Not tracking any projects currently.")
+            return "Not tracking any projects currently."
 
     def _get_expanding(self, room_id):
         try:
-            return self._body("Currently expanding %s" % json.dumps(self.state[room_id]["expanding"]))
+            return "Currently expanding %s" % json.dumps(self.state[room_id]["expanding"])
         except KeyError:
-            return self._body("Not expanding any projects currently.")
+            return "Not expanding any projects currently."
 
     def _send_tracking(self, room_id, project_keys):
         self.matrix.send_event(
@@ -179,7 +179,7 @@ class JiraPlugin(Plugin):
                     if issue_info:
                         self.matrix.send_message(
                             event["room_id"],
-                            self._body(issue_info)
+                            self.matrix._body(issue_info)
                         )
                 except Exception as e:
                     log.exception(e)
@@ -201,7 +201,7 @@ class JiraPlugin(Plugin):
         for (room_id, room_info) in self.state.iteritems():
             try:
                 if project in room_info["tracking"]:
-                    self.matrix.send_message(room_id, self._body(push_message))
+                    self.matrix.send_message(room_id, self.matrix._body(push_message))
             except KeyError:
                 pass
 

@@ -59,9 +59,7 @@ class JenkinsPlugin(Plugin):
             return self._get_tracking(event["room_id"])
         elif action == "projects":
             projects = self.store.get("known_projects")
-            return [
-                self._body("Available projects: %s" % json.dumps(projects)),
-            ]
+            return "Available projects: %s" % json.dumps(projects)
         else:
             return "Invalid arg '%s'.\n %s" % (action, self.cmd_show.__doc__)
 
@@ -73,13 +71,11 @@ class JenkinsPlugin(Plugin):
 
         for project in args:
             if not project in self.store.get("known_projects"):
-                return self._body("Unknown project name: %s." % project)
+                return "Unknown project name: %s." % project
 
         self._send_track_event(event["room_id"], args)
 
-        return self._body(
-            "Jenkins notifications for projects %s will be displayed when they fail." % (args)
-        )
+        return "Jenkins notifications for projects %s will be displayed when they fail." % (args)
 
     @admin_only
     def cmd_stop(self, event, action):
@@ -92,10 +88,10 @@ class JenkinsPlugin(Plugin):
 
     def _get_tracking(self, room_id):
         try:
-            return self._body("Currently tracking %s" %
+            return ("Currently tracking %s" %
             json.dumps(self.state[room_id]["projects"]))
         except KeyError:
-            return self._body("Not tracking any projects currently.")
+            return "Not tracking any projects currently."
 
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_event(
@@ -114,7 +110,7 @@ class JenkinsPlugin(Plugin):
                 if repo in room_info["projects"]:
                     self.matrix.send_message(
                         room_id,
-                        self._rich_body(push_message)
+                        self.matrix._rich_body(push_message)
                     )
             except KeyError:
                 pass

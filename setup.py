@@ -11,12 +11,8 @@ setup(
     packages = ['neb', 'plugins'],
     license = "LICENSE",
     install_requires = [
-        "pytumblr",
         "requests",
         "Flask",
         "python-dateutil"
-    ],
-    dependency_links=[
-        "git+ssh://git@github.com/tumblr/pytumblr.git",
     ],
 )

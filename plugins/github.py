@@ -106,7 +106,7 @@ class GithubPlugin(Plugin):
                 if repo in room_info["projects"]:
                     self.matrix.send_message(
                         room_id,
-                        self._rich_body(push_message)
+                        self.matrix._rich_body(push_message)
                     )
             except KeyError:
                 pass
@@ -152,7 +152,7 @@ class GithubPlugin(Plugin):
         """
 
         if not repo in self.store.get("known_projects"):
-            return self._body("Unknown github repo: %s" % repo)
+            return "Unknown github repo: %s" % repo
 
         # basic color validation
         valid = False
@@ -168,12 +168,12 @@ class GithubPlugin(Plugin):
                 valid = color_int <= 0xFFFFFF
                 color = "#%06x" % color_int
             except:
-                return self._body("Color should be like '#112233', '0x112233' or 'green'")
+                return "Color should be like '#112233', '0x112233' or 'green'"
 
         if not valid:
-            return self._body("Color should be like '#112233', '0x112233' or 'green'")
+            return "Color should be like '#112233', '0x112233' or 'green'"
 
-        return self._body("Not yet implemented. Valid. Repo=%s Branch=%s Color=%s" % (repo, branch, color))
+        return "Not yet implemented. Valid. Repo=%s Branch=%s Color=%s" % (repo, branch, color)
 
  #       color_list = self.store.get("project_colors")
  #       color_list
