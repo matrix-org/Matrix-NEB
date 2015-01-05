@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import re
 import requests
 import urllib
 import urlparse
@@ -54,7 +55,7 @@ class MatrixHttpApi(object):
 
         return self._send("POST", "/login", content)
 
-    def create_room(self, alias=None, is_public=True, invitees=()):
+    def create_room(self, alias=None, is_public=False, invitees=()):
         content = {
             "visibility": "public" if is_public else "private"
         }
@@ -97,11 +98,22 @@ class MatrixHttpApi(object):
     def send_message(self, room_id, text_content):
         return self.send_message_event(
             room_id, "m.room.message",
-            {
-                "body": text_content,
-                "msgtype": "m.text"
-            }
+            self.get_text_body(text_content)
         )
+
+    def get_text_body(self, text):
+        return {
+            "msgtype": "m.text",
+            "body": text
+        }
+
+    def get_html_body(self, html):
+        return {
+            "body": re.sub('<[^<]+?>', '', html),
+            "msgtype": "m.text",
+            "format": "org.matrix.custom.html",
+            "formatted_body": html
+        }
 
     def _send(self, method, path, content=None, query_params={}, headers={}):
         method = method.upper()
