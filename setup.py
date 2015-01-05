@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="Matrix-NEB",
-    version="0.0.1",
+    version="0.0.2",
     description="A generic bot for Matrix",
     author="Kegan Dougal",
     author_email="kegsay@gmail.com",
@@ -11,11 +11,8 @@ setup(
     packages = ['neb', 'plugins'],
     license = "LICENSE",
     install_requires = [
-        "pytumblr",
         "requests",
-        "Flask"
-    ],
-    dependency_links=[
-        "git+ssh://git@github.com/tumblr/pytumblr.git",
+        "Flask",
+        "python-dateutil"
     ],
 )

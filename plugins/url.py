@@ -1,32 +1,23 @@
-from neb.engine import Plugin, Command
+from neb.plugins import Plugin
 
 import urllib
 
 
 class UrlPlugin(Plugin):
+    """URL encode or decode text.
+    url encode <text>
+    url decode <text>
+    """
 
-    def get_commands(self):
-        """Return human readable commands with descriptions.
+    name = "url"
 
-        Returns:
-            list[Command]
-        """
-        return [
-            Command("urlencode", self.encode, "URL encode some text.", []),
-            Command("urldecode", self.decode, "URL decode some text.", [])
-        ]
+    def cmd_encode(self, event, *args):
+        """URL encode text. 'url encode <text>'"""
+        # use the body directly so quotes are parsed correctly.
+        return urllib.quote(event["content"]["body"][12:])
 
-    def encode(self, event, args):
-        content = ' '.join(args[1:])
-        return self._body(urllib.quote(content))
-
-    def decode(self, event, args):
-        content = ' '.join(args[1:])
-        return self._body(urllib.unquote(content))
-
-    def _error(self, value):
-        return self._body("Cannot convert %s" % (value))
-
-    def sync(self, matrix, initial_sync):
-        pass
+    def cmd_decode(self, event, *args):
+        """URL decode text. 'url decode <url encoded text>'"""
+        # use the body directly so quotes are parsed correctly.
+        return urllib.unquote(event["content"]["body"][12:])
 
