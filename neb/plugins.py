@@ -16,10 +16,10 @@ import logging as log
 
 def admin_only(fn):
     def wrapped(*args, **kwargs):
-        matrix = args[0].matrix
+        config = args[0].config
         event = args[1]
-        if event["user_id"] not in matrix.config.admins:
-            return "Sorry, only %s can do that." % json.dumps(matrix.config.admins)
+        if event["user_id"] not in config.admins:
+            return "Sorry, only %s can do that." % json.dumps(config.admins)
         result = fn(*args, **kwargs)
         return result
     return wrapped
@@ -31,8 +31,9 @@ class CommandNotFoundError(Exception):
 
 class PluginInterface(object):
 
-    def __init__(self, matrix_api, web_hook_server):
+    def __init__(self, matrix_api, config, web_hook_server):
         self.matrix = matrix_api
+        self.config = config
         self.webhook = web_hook_server
 
     def run(self, event, arg_str):

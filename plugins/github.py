@@ -103,9 +103,10 @@ class GithubPlugin(Plugin):
         for room_id in self.rooms.get_room_ids():
             try:
                 if repo in self.rooms.get_content(room_id, GithubPlugin.TYPE_TRACK)["projects"]:
-                    self.matrix.send_message(
+                    self.matrix.send_message_event(
                         room_id,
-                        self.matrix._rich_body(push_message)
+                        "m.room.message",
+                        self.matrix.get_html_body(push_message)
                     )
             except KeyError:
                 pass
@@ -175,13 +176,12 @@ class GithubPlugin(Plugin):
         return "Not yet implemented. Valid. Repo=%s Branch=%s Color=%s" % (repo, branch, color)
 
     def _send_track_event(self, room_id, project_names):
-        self.matrix.send_event(
+        self.matrix.send_state_event(
             room_id,
             self.TYPE_TRACK,
             {
                 "projects": project_names
-            },
-            state=True
+            }
         )
 
     def _get_tracking(self, room_id):

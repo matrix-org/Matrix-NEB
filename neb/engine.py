@@ -11,9 +11,10 @@ class Engine(object):
     """Orchestrates plugins and the matrix API/endpoints."""
     PREFIX = "!"
 
-    def __init__(self, matrix_api):
+    def __init__(self, matrix_api, config):
         self.plugin_cls = {}
         self.plugins = {}
+        self.config = config
         self.matrix = matrix_api
 
     def setup(self):
@@ -25,6 +26,7 @@ class Engine(object):
         for cls_name in self.plugin_cls:
             self.plugins[cls_name] = self.plugin_cls[cls_name](
                 self.matrix,
+                self.config,
                 self.webhook
             )
 
@@ -39,11 +41,10 @@ class Engine(object):
                 self.webhook.set_plugin(plugin.get_webhook_key(), plugin)
 
     def _help(self):
-        body = (
+        return (
             "Installed plugins: %s - Type '%shelp <plugin_name>' for more." %
             (self.plugins.keys(), Engine.PREFIX)
         )
-        return [self.matrix._body(body)]
 
     def add_plugin(self, plugin):
         log.debug("add_plugin %s", plugin)
@@ -54,11 +55,11 @@ class Engine(object):
 
     def parse_membership(self, event):
         log.info("Parsing membership: %s", event)
-        if (event["state_key"] == self.matrix.config.user_id
+        if (event["state_key"] == self.config.user_id
                 and event["content"]["membership"] == "invite"):
             user_id = event["user_id"]
-            if user_id in self.matrix.config.admins:
-                self.matrix.join_room(event["room_id"])
+            if user_id in self.config.admins:
+                self.matrix.join_room(room_id=event["room_id"])
             else:
                 log.info(
                     "Refusing invite, %s not in admin list. Event: %s",
@@ -67,7 +68,7 @@ class Engine(object):
 
     def parse_msg(self, event):
         body = event["content"]["body"]
-        if event["user_id"] == self.matrix.config.user_id:
+        if event["user_id"] == self.config.user_id:
             return
         if body.startswith(Engine.PREFIX):
             room = event["room_id"]
@@ -79,12 +80,11 @@ class Engine(object):
                         # return help on a plugin
                         self.matrix.send_message(
                             room,
-                            self.matrix._body(self.plugins[segments[1]].__doc__)
+                            self.plugins[segments[1]].__doc__
                         )
                     else:
                         # return generic help
-                        for help_msg in self._help():
-                            self.matrix.send_message(room, help_msg)
+                        self.matrix.send_message(room, self._help())
                 elif cmd in self.plugins:
                     plugin = self.plugins[cmd]
                     responses = None
@@ -97,7 +97,7 @@ class Engine(object):
                     except CommandNotFoundError as e:
                         self.matrix.send_message(
                             room,
-                            self.matrix._body(str(e))
+                            str(e)
                         )
 
                     if responses:
@@ -107,24 +107,28 @@ class Engine(object):
                                 if type(res) in [str, unicode]:
                                     self.matrix.send_message(
                                         room,
-                                        self.matrix._body(res)
+                                        res
                                     )
                                 else:
-                                    self.matrix.send_message(room, res)
+                                    self.matrix.send_message_event(
+                                        room, "m.room.message", res
+                                    )
                         elif type(responses) in [str, unicode]:
                             self.matrix.send_message(
                                 room,
-                                self.matrix._body(responses)
+                                responses
                             )
                         else:
-                            self.matrix.send_message(room, responses)
+                            self.matrix.send_message_event(
+                                room, "m.room.message", responses
+                            )
             except NebError as ne:
-                self.matrix.send_message(room, self.matrix._body(ne.as_str()))
+                self.matrix.send_message(room, ne.as_str())
             except Exception as e:
                 log.exception(e)
                 self.matrix.send_message(
                     room,
-                    self.matrix._body("Fatal error when processing command.")
+                    "Fatal error when processing command."
                 )
         else:
             try:
@@ -153,8 +157,7 @@ class Engine(object):
     def event_loop(self):
         end = "END"
         while True:
-            url = self.matrix._url("/events", {"timeout": 30000, "from": end})
-            j = self.matrix._open(url)
+            j = self.matrix.event_stream(timeout=30000, from_token=end)
             end = j["end"]
             events = j["chunk"]
             log.debug("Received: %s", events)

@@ -150,13 +150,12 @@ class JiraPlugin(Plugin):
             return "Not expanding any projects currently."
 
     def _send_state(self, etype, room_id, project_keys):
-        self.matrix.send_event(
+        self.matrix.send_state_event(
             room_id,
             etype,
             {
                 "projects": project_keys
-            },
-            state=True
+            }
         )
 
     def on_msg(self, event, body):
@@ -181,7 +180,7 @@ class JiraPlugin(Plugin):
                     if issue_info:
                         self.matrix.send_message(
                             event["room_id"],
-                            self.matrix._body(issue_info)
+                            issue_info
                         )
                 except Exception as e:
                     log.exception(e)
@@ -203,7 +202,7 @@ class JiraPlugin(Plugin):
             try:
                 content = self.rooms.get_content(room_id, JiraPlugin.TYPE_TRACK)
                 if project in content["projects"]:
-                    self.matrix.send_message(room_id, self.matrix._body(push_message))
+                    self.matrix.send_message(room_id, push_message)
             except KeyError:
                 pass
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import argparse
 
+from matrix.api import MatrixHttpApi
 from neb.engine import Engine
-from neb.matrix import Matrix, MatrixConfig
+from neb.matrix import MatrixConfig
 from plugins.b64 import Base64Plugin
 from plugins.guess_number import GuessNumberPlugin
 from plugins.jenkins import JenkinsPlugin
@@ -65,7 +66,7 @@ def configure_logging(logfile):
 
 def main(config):
     # setup api/endpoint
-    matrix = Matrix(config)
+    matrix = MatrixHttpApi(config.base_url, config.token)
 
     log.debug("Setting up plugins...")
     plugins = [
@@ -79,7 +80,7 @@ def main(config):
     ]
 
     # setup engine
-    engine = Engine(matrix)
+    engine = Engine(matrix, config)
     for plugin in plugins:
         engine.add_plugin(plugin)
 

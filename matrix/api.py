@@ -30,7 +30,10 @@ class MatrixHttpApi(object):
     """
 
     def __init__(self, base_url, token=None):
-        self.url = urlparse.urljoin(base_url, "/_matrix/client/api/v1")
+        if not base_url.endswith("/_matrix/client/api/v1"):
+            self.url = urlparse.urljoin(base_url, "/_matrix/client/api/v1")
+        else:
+            self.url = base_url
         self.token = token
         self.txn_id = 0
 
@@ -77,7 +80,16 @@ class MatrixHttpApi(object):
 
         return self._send("POST", path)
 
-    def send_state_event(self, room_id, event_type, content, state_key):
+    def event_stream(self, from_token, timeout=30000):
+        path = "/events"
+        return self._send(
+            "GET", path, query_params={
+                "timeout": timeout,
+                "from": from_token
+            }
+        )
+
+    def send_state_event(self, room_id, event_type, content, state_key=""):
         path = ("/rooms/%s/state/%s" %
             (urllib.quote(room_id), urllib.quote(event_type))
         )
@@ -87,7 +99,9 @@ class MatrixHttpApi(object):
 
     def send_message_event(self, room_id, event_type, content, txn_id=None):
         if not txn_id:
-            txn_id = self.txn_id + 1
+            txn_id = self.txn_id
+
+        self.txn_id = self.txn_id + 1
 
         path = ("/rooms/%s/send/%s/%s" %
             (urllib.quote(room_id), urllib.quote(event_type),
