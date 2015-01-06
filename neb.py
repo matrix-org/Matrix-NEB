@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 
-from matrix.api import MatrixHttpApi
+from matrix_client.api import MatrixHttpApi
 from neb.engine import Engine
 from neb.matrix import MatrixConfig
 from plugins.b64 import Base64Plugin
