@@ -11,8 +11,11 @@ setup(
     packages = ['neb', 'plugins'],
     license = "LICENSE",
     install_requires = [
-        "requests",
+        "matrix_client",
         "Flask",
         "python-dateutil"
     ],
+    dependency_links=[
+        "https://github.com/matrix-org/matrix-python-sdk/tarball/v0.0.1#egg=matrix_client-0.0.1"
+    ]
 )
