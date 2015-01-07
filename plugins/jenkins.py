@@ -112,7 +112,7 @@ class JenkinsPlugin(Plugin):
                         room_id, JenkinsPlugin.TYPE_TRACK)["projects"]):
                     self.matrix.send_message_event(
                         room_id,
-                        "m.room.message".
+                        "m.room.message",
                         self.matrix.get_html_body(push_message)
                     )
             except KeyError:
