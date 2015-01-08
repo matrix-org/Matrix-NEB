@@ -1,3 +1,4 @@
+from matrix_client.api import MatrixRequestError
 from neb import NebError
 from neb.plugins import CommandNotFoundError
 from neb.webhook import NebHookServer
@@ -98,6 +99,11 @@ class Engine(object):
                         self.matrix.send_message(
                             room,
                             str(e)
+                        )
+                    except MatrixRequestError as ex:
+                        self.matrix.send_message(
+                            room,
+                            "Problem making request: (%s) %s" % (ex.code, ex.content)
                         )
 
                     if responses:

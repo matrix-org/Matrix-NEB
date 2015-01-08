@@ -14,6 +14,8 @@ class JenkinsPlugin(Plugin):
     jenkins show track|tracking : Display which projects this bot is tracking.
     jenkins track project1 project2 ... : Track Jenkins notifications for the named projects.
     jenkins stop track|tracking : Stop tracking Jenkins notifications.
+    jenkins add projectName : Start tracking projectName.
+    jenkins remove projectName : Stop tracking projectName.
     """
     name = "jenkins"
 
@@ -75,6 +77,45 @@ class JenkinsPlugin(Plugin):
         self._send_track_event(event["room_id"], args)
 
         return "Jenkins notifications for projects %s will be displayed when they fail." % (args)
+
+    @admin_only
+    def cmd_add(self, event, project):
+        """Add a project for tracking. 'jenkins add projectName'"""
+        if project not in self.store.get("known_projects"):
+            return "Unknown project name: %s." % project
+
+        try:
+            room_projects = self.rooms.get_content(
+                event["room_id"],
+                JenkinsPlugin.TYPE_TRACK)["projects"]
+        except KeyError:
+            room_projects = []
+
+        if project in room_projects:
+            return "%s is already being tracked." % project
+
+        room_projects.append(project)
+        self._send_track_event(event["room_id"], room_projects)
+
+        return "Added %s. Jenkins notifications for projects %s will be displayed when they fail." % (project, room_projects)
+
+    @admin_only
+    def cmd_remove(self, event, project):
+        """Remove a project from tracking. 'jenkins remove projectName'"""
+        try:
+            room_projects = self.rooms.get_content(
+                event["room_id"],
+                JenkinsPlugin.TYPE_TRACK)["projects"]
+        except KeyError:
+            room_projects = []
+
+        if project not in room_projects:
+            return "Cannot remove %s : It isn't being tracked." % project
+
+        room_projects.remove(project)
+        self._send_track_event(event["room_id"], room_projects)
+
+        return "Removed %s. Jenkins notifications for projects %s will be displayed when they fail." % (project, room_projects)
 
     @admin_only
     def cmd_stop(self, event, action):

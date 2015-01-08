@@ -126,14 +126,18 @@ class GithubPlugin(Plugin):
         else:
             return self.cmd_show.__doc__
 
+    @admin_only
     def cmd_add(self, event, repo):
         """Add a repo for tracking. 'github add owner/repo'"""
         if repo not in self.store.get("known_projects"):
             return "Unknown project name: %s." % repo
 
-        room_repos = self.rooms.get_content(
-            event["room_id"],
-            GithubPlugin.TYPE_TRACK)["projects"]
+        try:
+            room_repos = self.rooms.get_content(
+                event["room_id"],
+                GithubPlugin.TYPE_TRACK)["projects"]
+        except KeyError:
+            room_repos = []
 
         if repo in room_repos:
             return "%s is already being tracked." % repo
@@ -143,11 +147,15 @@ class GithubPlugin(Plugin):
 
         return "Added %s. Commits for projects %s will be displayed as they are commited." % (repo, room_repos)
 
+    @admin_only
     def cmd_remove(self, event, repo):
         """Remove a repo from tracking. 'github remove owner/repo'"""
-        room_repos = self.rooms.get_content(
-            event["room_id"],
-            GithubPlugin.TYPE_TRACK)["projects"]
+        try:
+            room_repos = self.rooms.get_content(
+                event["room_id"],
+                GithubPlugin.TYPE_TRACK)["projects"]
+        except KeyError:
+            room_repos = []
 
         if repo not in room_repos:
             return "Cannot remove %s : It isn't being tracked." % repo
