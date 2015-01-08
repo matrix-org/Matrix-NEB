@@ -14,6 +14,8 @@ class GithubPlugin(Plugin):
     github show projects : Show which github projects this bot recognises.
     github show track|tracking : Show which projects are being tracked.
     github track "owner/repo" "owner/repo" : Track the given projects.
+    github add owner/repo : Add the given repo to the tracking list.
+    github remove owner/repo : Remove the given repo from the tracking list.
     github stop track|tracking : Stop tracking github projects.
     """
     name = "github"
@@ -123,6 +125,37 @@ class GithubPlugin(Plugin):
             return self._get_tracking(event["room_id"])
         else:
             return self.cmd_show.__doc__
+
+    def cmd_add(self, event, repo):
+        """Add a repo for tracking. 'github add owner/repo'"""
+        if repo not in self.store.get("known_projects"):
+            return "Unknown project name: %s." % repo
+
+        room_repos = self.rooms.get_content(
+            event["room_id"],
+            GithubPlugin.TYPE_TRACK)["projects"]
+
+        if repo in room_repos:
+            return "%s is already being tracked." % repo
+
+        room_repos.append(repo)
+        self._send_track_event(event["room_id"], room_repos)
+
+        return "Added %s. Commits for projects %s will be displayed as they are commited." % (repo, room_repos)
+
+    def cmd_remove(self, event, repo):
+        """Remove a repo from tracking. 'github remove owner/repo'"""
+        room_repos = self.rooms.get_content(
+            event["room_id"],
+            GithubPlugin.TYPE_TRACK)["projects"]
+
+        if repo not in room_repos:
+            return "Cannot remove %s : It isn't being tracked." % repo
+
+        room_repos.remove(repo)
+        self._send_track_event(event["room_id"], room_repos)
+
+        return "Removed %s. Commits for projects %s will be displayed as they are commited." % (repo, room_repos)
 
     @admin_only
     def cmd_track(self, event, *args):
