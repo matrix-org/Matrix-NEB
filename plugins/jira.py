@@ -194,7 +194,7 @@ class JiraPlugin(Plugin):
 
         # form the message
         link = "%s/browse/%s" % (self.store.get("url"), info["key"])
-        push_message = "%s %s %s - %s %s" % (info["user"], info["action"],
+        push_message = "%s %s <b>%s</b> - %s %s" % (info["user"], info["action"],
                        info["key"], info["summary"], link)
 
         # send messages to all rooms registered with this project.
@@ -202,7 +202,11 @@ class JiraPlugin(Plugin):
             try:
                 content = self.rooms.get_content(room_id, JiraPlugin.TYPE_TRACK)
                 if project in content["projects"]:
-                    self.matrix.send_message(room_id, push_message)
+                    self.matrix.send_message_event(
+                        room_id,
+                        "m.room.message",
+                        self.matrix.get_html_body(push_message)
+                    )
             except KeyError:
                 pass
 
