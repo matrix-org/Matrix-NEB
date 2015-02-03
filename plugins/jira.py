@@ -180,7 +180,8 @@ class JiraPlugin(Plugin):
                     if issue_info:
                         self.matrix.send_message(
                             event["room_id"],
-                            issue_info
+                            issue_info,
+                            msgtype="m.notice"
                         )
                 except Exception as e:
                     log.exception(e)
