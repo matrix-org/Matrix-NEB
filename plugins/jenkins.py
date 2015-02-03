@@ -154,7 +154,7 @@ class JenkinsPlugin(Plugin):
                     self.matrix.send_message_event(
                         room_id,
                         "m.room.message",
-                        self.matrix.get_html_body(push_message)
+                        self.matrix.get_html_body(push_message, msgtype="m.notice")
                     )
             except KeyError:
                 pass
