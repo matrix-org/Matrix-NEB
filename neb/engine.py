@@ -69,7 +69,8 @@ class Engine(object):
 
     def parse_msg(self, event):
         body = event["content"]["body"]
-        if event["user_id"] == self.config.user_id:
+        if (event["user_id"] == self.config.user_id or 
+                event["content"]["msgtype"] == "m.notice"):
             return
         if body.startswith(Engine.PREFIX):
             room = event["room_id"]
