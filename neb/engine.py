@@ -60,7 +60,7 @@ class Engine(object):
                 and event["content"]["membership"] == "invite"):
             user_id = event["user_id"]
             if user_id in self.config.admins:
-                self.matrix.join_room(room_id=event["room_id"])
+                self.matrix.join_room(event["room_id"])
             else:
                 log.info(
                     "Refusing invite, %s not in admin list. Event: %s",
