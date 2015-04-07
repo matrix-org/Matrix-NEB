@@ -120,7 +120,7 @@ class GithubPlugin(Plugin):
         """
         if action == "projects":
             projects = self.store.get("known_projects")
-            return "Available projects: %s" % json.dumps(projects)
+            return "Available projects: %s - To add more projects, you must register a webhook on Github." % json.dumps(projects)
         elif action in self.TRACKING:
             return self._get_tracking(event["room_id"])
         else:
