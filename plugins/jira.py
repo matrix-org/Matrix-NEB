@@ -140,6 +140,17 @@ class JiraPlugin(Plugin):
             event["user_id"], project, priority, title, desc
         )
 
+    @admin_only
+    def cmd_comment(self, event, *args):
+        """Comment on an issue. Format: 'comment <key> <comment text>'
+        E.g. 'comment syn-56 A comment goes here'
+        """
+        if not args or len(args) < 2:
+            return self.cmd_comment.__doc__
+        key = args[0].upper()
+        text = ' '.join(args[1:])
+        return self._comment_issue(event["user_id"], key, text)
+
     def cmd_version(self, event):
         """Display version information for the configured JIRA platform. 'jira version'"""
         url = self._url("/rest/api/2/serverInfo")
@@ -312,6 +323,24 @@ class JiraPlugin(Plugin):
         link = self._linkify(issue_key)
 
         return "Created issue: %s" % link
+
+    def _comment_issue(self, user_id, key, text):
+        text = "By %s: %s" % (user_id, text)
+        info = {
+            "body": text
+        }
+
+        url = self._url("/rest/api/2/issue/%s/comment" % key)
+        res = requests.post(url, auth=self.auth, data=json.dumps(info), headers={
+            "Content-Type": "application/json"
+        })
+
+        if res.status_code < 200 or res.status_code >= 300:
+            err = "Failed: HTTP %s - %s" % (res.status_code, res.text)
+            log.error(err)
+            return err
+        link = self._linkify(key)
+        return "Commented on issue %s" % link
 
     def _linkify(self, key):
         return "%s/browse/%s" % (self.store.get("url"), key)
