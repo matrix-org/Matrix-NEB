@@ -7,6 +7,7 @@
 #   send_event(foo, bar)
 #   send_message(foo, bar)
 
+from functools import wraps
 import inspect
 import json
 import shlex
@@ -15,6 +16,7 @@ import logging as log
 
 
 def admin_only(fn):
+    @wraps(fn)
     def wrapped(*args, **kwargs):
         config = args[0].config
         event = args[1]

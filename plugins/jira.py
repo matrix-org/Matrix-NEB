@@ -18,6 +18,8 @@ class JiraPlugin(Plugin):
     jira stop expand|expansion|expanding : Stop expanding jira issues.
     jira show track|tracking : Show which projects are being tracked.
     jira show expansion|expand|expanding : Show which project keys will result in issue expansion.
+    jira create <project> <priority> <title> <desc> : Create a new JIRA issue.
+    jira comment <issue-id> <comment> : Comment on a JIRA issue.
     """
     name = "jira"
 
@@ -101,6 +103,42 @@ class JiraPlugin(Plugin):
 
         url = self.store.get("url")
         return "Issues for projects %s from %s will be expanded as they are mentioned." % (args, url)
+
+    @admin_only
+    def cmd_create(self, event, *args):
+        """Create a new issue. Format: 'create <project> <priority(optional;default 3)> <title> <desc(optional)>'
+        E.g. 'create syn p1 This is the title without quote marks'
+        'create syn p1 "Title here" "desc here"
+        """
+        if not args or len(args) < 2:
+            return self.cmd_create.__doc__
+        project = args[0]
+        priority = 3
+        others = args[1:]
+        if re.match("[Pp][0-9]", args[1]):
+            if len(args) < 3:  # priority without title
+                return self.cmd_create.__doc__
+            try:
+                priority = int(args[1][1:])
+                others = args[2:]
+            except ValueError:
+                return self.cmd_create.__doc__
+
+        # others must contain a title, may contain a description. If it contains
+        # a description, it MUST be in [1] and be longer than 1 word.
+        title = ' '.join(others)
+        desc = ""
+        try:
+            possible_desc = others[1]
+            if ' ' in possible_desc:
+                desc = possible_desc
+                title = others[0]
+        except:
+            pass
+
+        return self._create_issue(
+            event["user_id"], project, priority, title, desc
+        )
 
     def cmd_version(self, event):
         """Display version information for the configured JIRA platform. 'jira version'"""
@@ -194,7 +232,7 @@ class JiraPlugin(Plugin):
         project = self.regex.match(info["key"]).groups()[1]
 
         # form the message
-        link = "%s/browse/%s" % (self.store.get("url"), info["key"])
+        link = self._linkify(info["key"])
         push_message = "%s %s <b>%s</b> - %s %s" % (info["user"], info["action"],
                        info["key"], info["summary"], link)
 
@@ -222,7 +260,7 @@ class JiraPlugin(Plugin):
             return
 
         response = json.loads(res.text)
-        link = "%s/browse/%s" % (self.store.get("url"), issue_key)
+        link = self._linkify(issue_key)
         desc = response["fields"]["summary"]
         status = response["fields"]["status"]["name"]
         priority = response["fields"]["priority"]["name"]
@@ -234,6 +272,49 @@ class JiraPlugin(Plugin):
         info = "%s : %s [%s,%s,reporter=%s,assignee=%s]" % (link, desc, status,
                priority, reporter, assignee)
         return info
+
+    def _create_issue(self, user_id, project, priority, title, desc=""):
+        if priority < 1:
+            priority = 1
+        if priority > 5:
+            priority = 5
+        desc = "Submitted by %s\n%s" % (user_id, desc)
+
+        fields = {}
+        fields["priority"] = {
+            "name": ("P%s" % priority)
+        }
+        fields["project"] = {
+            "key": project.upper().strip()
+        }
+        fields["issuetype"] = {
+            "name": "Bug"
+        }
+        fields["summary"] = title
+        fields["description"] = desc
+
+        info = {
+            "fields": fields
+        }
+
+        url = self._url("/rest/api/2/issue")
+        res = requests.post(url, auth=self.auth, data=json.dumps(info), headers={
+            "Content-Type": "application/json"
+        })
+
+        if res.status_code < 200 or res.status_code >= 300:
+            err = "Failed: HTTP %s - %s" % (res.status_code, res.text)
+            log.error(err)
+            return err
+
+        response = json.loads(res.text)
+        issue_key = response["key"]
+        link = self._linkify(issue_key)
+
+        return "Created issue: %s" % link
+
+    def _linkify(self, key):
+        return "%s/browse/%s" % (self.store.get("url"), key)
 
     def _url(self, path):
         return self.store.get("url") + path

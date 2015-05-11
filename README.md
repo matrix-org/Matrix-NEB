@@ -46,8 +46,3 @@ URL
 B64
 ---
  - Provides base64 encoding/decoding.
-
-Tumblr
-------
- - Sends tumblr posts for Tumblr users to interested rooms.
- - Unstable, WIP.
