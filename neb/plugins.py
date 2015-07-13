@@ -93,7 +93,12 @@ class PluginInterface(object):
 class Plugin(PluginInterface):
 
     def run(self, event, arg_str):
-        args_array = shlex.split(arg_str.encode("utf8"))
+        args_array = [arg_str.encode("utf8")]
+        try:
+            args_array = shlex.split(arg_str.encode("utf8"))
+        except ValueError:
+            pass  # may be 1 arg without need for quotes
+
         if len(args_array) == 0:
             raise CommandNotFoundError(self.__doc__)
 
