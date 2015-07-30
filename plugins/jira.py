@@ -123,7 +123,10 @@ class JiraPlugin(Plugin):
                 others = args[2:]
             except ValueError:
                 return self.cmd_create.__doc__
-
+        elif re.match("[Pp][0-9]", args[0]):
+            priority = int(args[0][1:])
+            project = args[1]
+            others = args[2:]
         # others must contain a title, may contain a description. If it contains
         # a description, it MUST be in [1] and be longer than 1 word.
         title = ' '.join(others)
