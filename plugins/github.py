@@ -301,12 +301,14 @@ class GithubPlugin(Plugin):
 
         pr_title = issue["title"]
         pr_num = issue["number"]
+        pr_username = issue["user"]["login"]
         comment_url = comment["html_url"]
         username = comment["user"]["login"]
 
-        msg = "[%s] %s commented on <b>pull request #%s</b>: %s - %s" % (
+        msg = "[%s] %s commented on %s's <b>pull request #%s</b>: %s - %s" % (
             repo_name,
             username,
+            pr_username,
             pr_num,
             pr_title,
             comment_url
