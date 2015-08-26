@@ -59,7 +59,7 @@ class GithubPlugin(Plugin):
         push_message = ""
 
         if info["type"] == "delete":
-            push_message = '[%s] %s <font color="red"><b>deleted</font> %s</b>' % (
+            push_message = '[<u>%s</u>] %s <font color="red"><b>deleted</font> %s</b>' % (
                 info["repo"],
                 info["commit_username"],
                 info["branch"]
@@ -86,7 +86,7 @@ class GithubPlugin(Plugin):
                     summary += "\n%s: %s" % (c["author"], c["summary"])
                     count += 1
 
-                push_message = "[%s] %s pushed %s commits to <b>%s</b>: %s %s" % (
+                push_message = "[<u>%s</u>] %s pushed %s commits to <b>%s</b>: %s %s" % (
                     info["repo"],
                     info["commit_username"],
                     info["num_commits"],
@@ -254,7 +254,7 @@ class GithubPlugin(Plugin):
 
         user = data["sender"]["login"]
 
-        msg = "[%s] %s %s <b>pull request #%s</b>: %s [%s] - %s" % (
+        msg = "[<u>%s</u>] %s %s <b>pull request #%s</b>: %s [%s] - %s" % (
             repo_name,
             user,
             action,
@@ -274,7 +274,7 @@ class GithubPlugin(Plugin):
         user = data["sender"]["login"]
         repo_name = data["repository"]["full_name"]
 
-        msg = '[%s] %s <font color="green">created</font> a new branch: <b>%s</b>' % (
+        msg = '[<u>%s</u>] %s <font color="green">created</font> a new branch: <b>%s</b>' % (
             repo_name,
             user,
             branch_name
@@ -305,7 +305,7 @@ class GithubPlugin(Plugin):
         comment_url = comment["html_url"]
         username = comment["user"]["login"]
 
-        msg = "[%s] %s commented on %s's <b>pull request #%s</b>: %s - %s" % (
+        msg = "[<u>%s</u>] %s commented on %s's <b>pull request #%s</b>: %s - %s" % (
             repo_name,
             username,
             pr_username,
@@ -329,7 +329,7 @@ class GithubPlugin(Plugin):
         if action == "assigned":
             try:
                 assignee = data["assignee"]["login"]
-                msg = "[%s] %s assigned issue #%s to %s: %s - %s" % (
+                msg = "[<u>%s</u>] %s assigned issue #%s to %s: %s - %s" % (
                     repo_name,
                     user,
                     issue_num,
@@ -343,7 +343,7 @@ class GithubPlugin(Plugin):
                 pass
 
 
-        msg = "[%s] %s %s issue #%s: %s - %s" % (
+        msg = "[<u>%s</u>] %s %s issue #%s: %s - %s" % (
             repo_name,
             user,
             action,
