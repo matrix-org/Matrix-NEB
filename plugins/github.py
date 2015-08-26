@@ -69,7 +69,7 @@ class GithubPlugin(Plugin):
             # [<repo>] <username> pushed <num> commits to <branch>: <git.io link>
             # 1<=3 of <branch name> <short hash> <full username>: <comment>
             if info["num_commits"] == 1:
-                push_message = "[%s] %s pushed to <b>%s</b>: %s  - %s" % (
+                push_message = "[<u>%s</u>] %s pushed to <b>%s</b>: %s  - %s" % (
                     info["repo"],
                     info["commit_username"],
                     info["branch"],
