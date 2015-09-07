@@ -202,8 +202,7 @@ class GithubPlugin(Plugin):
     def cmd_create(self, event, *args):
         """Create a new issue. Format: 'create <owner/repo> <title> <desc(optional)>'
         E.g. 'create matrix-org/synapse A bug goes here
-        'create matrix-org/synapse "Title here" "desc here"
-        """
+        'create matrix-org/synapse "Title here" "desc here" """
         if not args or len(args) < 2:
             return self.cmd_create.__doc__
         project = args[0]
