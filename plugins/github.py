@@ -5,6 +5,7 @@ from neb.plugins import Plugin, admin_only
 from hashlib import sha1
 import hmac
 import json
+import requests
 
 import logging as log
 
@@ -17,6 +18,7 @@ class GithubPlugin(Plugin):
     github add owner/repo : Add the given repo to the tracking list.
     github remove owner/repo : Remove the given repo from the tracking list.
     github stop track|tracking : Stop tracking github projects.
+    github create owner/repo "Bug title" "Bug desc" : Create an issue on Github.
     """
     name = "github"
     #New events:
@@ -45,6 +47,15 @@ class GithubPlugin(Plugin):
 
         if not self.store.has("secret_token"):
             self.store.set("secret_token", "")
+
+        if not self.store.has("github_access_token"):
+            log.info("A github access_token is required to create github issues.")
+            log.info("Issues will be created as this user.")
+            token = raw_input("(Optional) Github token: ").strip()
+            if token:
+                self.store.set("github_access_token", token)
+            else:
+                log.info("You will not be able to create Github issues.")
 
     def on_receive_github_push(self, info):
         log.info("recv %s", info)
@@ -187,34 +198,57 @@ class GithubPlugin(Plugin):
         else:
             return self.cmd_stop.__doc__
 
-    def xcmd_color(self, event, repo, branch, color):
-        """"Set the color of notifications for a project and branch. The color must be hex or an HTML 4 named color.
-        'github color project branch color' e.g. github color bob/repo develop #0000ff
+    @admin_only
+    def cmd_create(self, event, *args):
+        """Create a new issue. Format: 'create <owner/repo> <title> <desc(optional)>'
+        E.g. 'create matrix-org/synapse A bug goes here
+        'create matrix-org/synapse "Title here" "desc here"
         """
+        if not args or len(args) < 2:
+            return self.cmd_create.__doc__
+        project = args[0]
+        others = args[1:]
+        # others must contain a title, may contain a description. If it contains
+        # a description, it MUST be in [1] and be longer than 1 word.
+        title = ' '.join(others)
+        desc = ""
+        try:
+            possible_desc = others[1]
+            if ' ' in possible_desc:
+                desc = possible_desc
+                title = others[0]
+        except:
+            pass
 
-        if not repo in self.store.get("known_projects"):
-            return "Unknown github repo: %s" % repo
+        return self._create_issue(
+            event["user_id"], project, title, desc
+        )
 
-        # basic color validation
-        valid = False
-        color = color.strip().lower()
-        if color in ["white","silver","gray","black","red","maroon","yellow","olive","lime","green","aqua","teal","blue","navy","fuchsia","purple"]:
-            valid = True
-        else:
-            test_color = color
-            if color[0] == '#':
-                test_color = color[1:]
-            try:
-                color_int = int(test_color, 16)
-                valid = color_int <= 0xFFFFFF
-                color = "#%06x" % color_int
-            except:
-                return "Color should be like '#112233', '0x112233' or 'green'"
+    def _create_issue(self, user_id, project, title, desc=""):
+        if not self.store.has("github_access_token"):
+            return "This plugin isn't configured to create Github issues."
 
-        if not valid:
-            return "Color should be like '#112233', '0x112233' or 'green'"
+        # Add a space after the @ to avoid pinging people on Github!
+        user_id = user_id.replace("@", "@ ")
 
-        return "Not yet implemented. Valid. Repo=%s Branch=%s Color=%s" % (repo, branch, color)
+        desc = "Created by %s.\n\n%s" % (user_id, desc)
+        info = {
+            "title": title,
+            "body": desc
+        }
+
+        url = "https://api.github.com/repos/%s/issues" % project
+        res = requests.post(url, data=json.dumps(info), headers={
+            "Content-Type": "application/json",
+            "Authorization": "token %s" % self.store.get("github_access_token")
+        })
+        if res.status_code < 200 or res.status_code >= 300:
+            err = "%s Failed: HTTP %s" % (url, res.status_code,)
+            log.error(err)
+            return err
+
+        response = json.loads(res.text)
+        return "Created issue: %s" % response["html_url"]
 
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_state_event(
