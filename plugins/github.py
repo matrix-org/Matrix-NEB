@@ -349,6 +349,26 @@ class GithubPlugin(Plugin):
         self.send_message_to_repos(repo_name, msg)
 
 
+    def on_receive_pull_request_comment(self, data):
+        repo_name = data["repository"]["full_name"]
+        username = data["sender"]["login"]
+        pull_request = data["pull_request"]
+        pr_username = pull_request["user"]["login"]
+        pr_num = pull_request["number"]
+        pr_title = pull_request["title"]
+        comment_url = data["comment"]["html_url"]
+
+        msg = "[<u>%s</u>] %s made a line comment on %s's <b>pull request #%s</b>: %s - %s" % (
+            repo_name,
+            username,
+            pr_username,
+            pr_num,
+            pr_title,
+            comment_url
+        )
+        self.send_message_to_repos(repo_name, msg)
+
+
     def on_receive_issue(self, data):
         action = data["action"]
         repo_name = data["repository"]["full_name"]
@@ -413,8 +433,13 @@ class GithubPlugin(Plugin):
         elif event_type == "ping":
             self.on_receive_ping(json.loads(data))
             return
-        elif event_type == "issue_comment":  # INCLUDES PR COMMENTS!!!
+        elif event_type == "issue_comment":
+            # INCLUDES PR COMMENTS!!!
+            # But not line comments!
             self.on_receive_comment(json.loads(data))
+            return
+        elif event_type == "pull_request_review_comment":
+            self.on_receive_pull_request_comment(json.loads(data))
             return
 
         j = json.loads(data)
