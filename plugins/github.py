@@ -440,6 +440,7 @@ class GithubPlugin(Plugin):
             return
         elif event_type == "pull_request_review_comment":
             self.on_receive_pull_request_comment(json.loads(data))
+            return
 
         j = json.loads(data)
         repo_name = j["repository"]["full_name"]
