@@ -288,7 +288,7 @@ class GithubPlugin(Plugin):
         user = data["sender"]["login"]
 
         try:
-            action_target = " %s" % (pr["assignee"]["login"],)
+            action_target = " to %s" % (pr["assignee"]["login"],)
         except KeyError:
             action_target = ""
 
