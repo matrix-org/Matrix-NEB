@@ -287,13 +287,19 @@ class GithubPlugin(Plugin):
 
         user = data["sender"]["login"]
 
-        msg = "[<u>%s</u>] %s %s <b>pull request #%s</b>: %s [%s] - %s" % (
+        try:
+            action_target = " %s" % (pr["assignee"]["login"],)
+        except KeyError:
+            action_target = ""
+
+        msg = "[<u>%s</u>] %s %s <b>pull request #%s</b>: %s [%s]%s - %s" % (
             repo_name,
             user,
             action,
             pull_req_num,
             pr_title,
             pr_state,
+            action_target,
             pr_url
         )
 
