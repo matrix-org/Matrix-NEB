@@ -324,7 +324,7 @@ class GithubPlugin(Plugin):
     def on_receive_ping(self, data):
         repo_name = data.get("repository", {}).get("full_name")
         # add the project if we didn't know about it before
-        if repo_name not in self.store.get("known_projects"):
+        if repo_name and repo_name not in self.store.get("known_projects"):
             log.info("Added new repo: %s", repo_name)
             projects = self.store.get("known_projects")
             projects.append(repo_name)
