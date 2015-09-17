@@ -322,7 +322,7 @@ class GithubPlugin(Plugin):
         self.send_message_to_repos(repo_name, msg)
 
     def on_receive_ping(self, data):
-        repo_name = data["repository"]["full_name"]
+        repo_name = data.get("repository", {}).get("full_name")
         # add the project if we didn't know about it before
         if repo_name not in self.store.get("known_projects"):
             log.info("Added new repo: %s", repo_name)
@@ -426,29 +426,38 @@ class GithubPlugin(Plugin):
                          ip)
                 return ("", 403, {})
 
+        json_data = json.loads(data)
+        is_private_repo = json_data.get("repository", {}).get("private")
+        if is_private_repo:
+            log.info(
+                "Received private repo event for %s", json_data["repository"].get("name")
+            )
+            return
+
+
         event_type = headers.get('X-GitHub-Event')
         if event_type == "pull_request":
-            self.on_receive_pull_request(json.loads(data))
+            self.on_receive_pull_request(json_data)
             return
         elif event_type == "issues":
-            self.on_receive_issue(json.loads(data))
+            self.on_receive_issue(json_data)
             return
         elif event_type == "create":
-            self.on_receive_create(json.loads(data))
+            self.on_receive_create(json_data)
             return
         elif event_type == "ping":
-            self.on_receive_ping(json.loads(data))
+            self.on_receive_ping(json_data)
             return
         elif event_type == "issue_comment":
             # INCLUDES PR COMMENTS!!!
             # But not line comments!
-            self.on_receive_comment(json.loads(data))
+            self.on_receive_comment(json_data)
             return
         elif event_type == "pull_request_review_comment":
-            self.on_receive_pull_request_comment(json.loads(data))
+            self.on_receive_pull_request_comment(json_data)
             return
 
-        j = json.loads(data)
+        j = json_data
         repo_name = j["repository"]["full_name"]
         # strip 'refs/heads' from 'refs/heads/branch_name'
         branch = '/'.join(j["ref"].split('/')[2:])
