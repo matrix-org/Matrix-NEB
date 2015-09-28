@@ -361,14 +361,18 @@ class GithubPlugin(Plugin):
         pull_request = data["pull_request"]
         pr_username = pull_request["user"]["login"]
         pr_num = pull_request["number"]
+        assignee = "None"
+        if "assignee" in data["pull_request"]:
+            assignee = data["pull_request"]["assignee"]["login"]
         pr_title = pull_request["title"]
         comment_url = data["comment"]["html_url"]
 
-        msg = "[<u>%s</u>] %s made a line comment on %s's <b>pull request #%s</b>: %s - %s" % (
+        msg = "[<u>%s</u>] %s made a line comment on %s's <b>pull request #%s</b> (assignee: %s): %s - %s" % (
             repo_name,
             username,
             pr_username,
             pr_num,
+            assignee,
             pr_title,
             comment_url
         )
