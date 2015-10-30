@@ -19,6 +19,7 @@ class GithubPlugin(Plugin):
     github remove owner/repo : Remove the given repo from the tracking list.
     github stop track|tracking : Stop tracking github projects.
     github create owner/repo "Bug title" "Bug desc" : Create an issue on Github.
+    github label add|remove owner/repo issue# label : Label an issue on Github.
     """
     name = "github"
     #New events:
