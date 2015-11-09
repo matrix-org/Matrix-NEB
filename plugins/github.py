@@ -356,10 +356,9 @@ class GithubPlugin(Plugin):
 
         user = data["sender"]["login"]
 
-        try:
+        action_target = ""
+        if pr.get("assignee") and pr["assignee"].get("login"):
             action_target = " to %s" % (pr["assignee"]["login"],)
-        except KeyError:
-            action_target = ""
 
         msg = "[<u>%s</u>] %s %s <b>pull request #%s</b>: %s [%s]%s - %s" % (
             repo_name,
@@ -431,7 +430,7 @@ class GithubPlugin(Plugin):
         pr_username = pull_request["user"]["login"]
         pr_num = pull_request["number"]
         assignee = "None"
-        if data["pull_request"]["assignee"]:
+        if data["pull_request"].get("assignee"):
             assignee = data["pull_request"]["assignee"]["login"]
         pr_title = pull_request["title"]
         comment_url = data["comment"]["html_url"]
