@@ -19,6 +19,7 @@ class GithubPlugin(Plugin):
     github remove owner/repo : Remove the given repo from the tracking list.
     github stop track|tracking : Stop tracking github projects.
     github create owner/repo "Bug title" "Bug desc" : Create an issue on Github.
+    github label add|remove owner/repo issue# label : Label an issue on Github.
     """
     name = "github"
     #New events:
@@ -223,6 +224,58 @@ class GithubPlugin(Plugin):
             event["user_id"], project, title, desc
         )
 
+    @admin_only
+    def cmd_label_remove(self, event, repo, issue_num, *args):
+        """Remove a label on an issue. Format: 'label remove <owner/repo> <issue num> <label> <label> <label>'
+        E.g. 'label remove matrix-org/synapse 323 bug p2 blocked'
+        """
+        e = self._is_valid_issue_request(repo, issue_num)
+        if e:
+            return e
+        if len(args) == 0:
+            return "You must specify at least one label."
+
+        errs = []
+
+        for label in args:
+            url = "https://api.github.com/repos/%s/issues/%s/labels/%s" % (repo, issue_num, label)
+            res = requests.delete(url, headers={
+                "Authorization": "token %s" % self.store.get("github_access_token")
+            })
+            if res.status_code < 200 or res.status_code >= 300:
+                errs.append(
+                    "Problem removing label %s : HTTP %s" % (label, res.status_code)
+                )
+                return err
+
+        if len(errs) == 0:
+            return "Removed labels %s" % (json.dumps(args),)
+        else:
+            return "There was a problem removing some labels:\n" + "\n".join(errs)
+
+    @admin_only
+    def cmd_label_add(self, event, repo, issue_num, *args):
+        """Label an issue. Format: 'label add <owner/repo> <issue num> <label> <label> <label>'
+        E.g. 'label add matrix-org/synapse 323 bug p2 blocked'
+        """
+        e = self._is_valid_issue_request(repo, issue_num)
+        if e:
+            return e
+        if len(args) == 0:
+            return "You must specify at least one label."
+
+        url = "https://api.github.com/repos/%s/issues/%s/labels" % (repo, issue_num)
+        res = requests.post(url, data=json.dumps(args), headers={
+            "Content-Type": "application/json",
+            "Authorization": "token %s" % self.store.get("github_access_token")
+        })
+        if res.status_code < 200 or res.status_code >= 300:
+            err = "%s Failed: HTTP %s" % (url, res.status_code,)
+            log.error(err)
+            return err
+
+        return "Added labels %s" % (json.dumps(args),)
+
     def _create_issue(self, user_id, project, title, desc=""):
         if not self.store.has("github_access_token"):
             return "This plugin isn't configured to create Github issues."
@@ -248,6 +301,22 @@ class GithubPlugin(Plugin):
 
         response = json.loads(res.text)
         return "Created issue: %s" % response["html_url"]
+
+    def _is_valid_issue_request(self, repo, issue_num):
+        issue_is_num = True
+        try:
+            issue_is_num = int(issue_num)
+        except ValueError:
+            issue_is_num = False
+
+        if "/" not in repo:
+            return "Repo must be in the form 'owner/repo' e.g. 'matrix-org/synapse'."
+
+        if not issue_is_num:
+            return "Issue number must be a number"
+        
+        if not self.store.has("github_access_token"):
+            return "This plugin isn't configured to interact with Github issues."
 
     def _send_track_event(self, room_id, project_names):
         self.matrix.send_state_event(
