@@ -431,7 +431,7 @@ class GithubPlugin(Plugin):
         pr_username = pull_request["user"]["login"]
         pr_num = pull_request["number"]
         assignee = "None"
-        if "assignee" in data["pull_request"]:
+        if data["pull_request"]["assignee"]:
             assignee = data["pull_request"]["assignee"]["login"]
         pr_title = pull_request["title"]
         comment_url = data["comment"]["html_url"]
