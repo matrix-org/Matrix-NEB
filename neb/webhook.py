@@ -52,6 +52,7 @@ class NebHookServer(threading.Thread):
 
     def notify_plugin(self, content):
         self.plugin.on_receive_github_push(content)
+        self.plugin.on_receive_message(content)
 
     def run(self):
         log.info("Running NebHookServer")

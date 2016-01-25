@@ -9,8 +9,9 @@ from plugins.guess_number import GuessNumberPlugin
 from plugins.jenkins import JenkinsPlugin
 from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
-from plugins.time import TimePlugin
+from plugins.time_x import TimePlugin
 from plugins.github import GithubPlugin
+from plugins.prometheus import PrometheusPlugin
 
 import logging
 import logging.handlers
@@ -77,6 +78,7 @@ def main(config):
         UrlPlugin,
         GithubPlugin,
         JenkinsPlugin,
+        PrometheusPlugin,
     ]
 
     # setup engine

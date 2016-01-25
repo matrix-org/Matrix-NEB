@@ -1,0 +1,3 @@
+{
+    "message_template": "[ALERT] {{labels.alertname}} : {{summary}}\n{{payload.generatorURL}} \n{{description}}"
+}
