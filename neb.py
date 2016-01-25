@@ -9,7 +9,7 @@ from plugins.guess_number import GuessNumberPlugin
 from plugins.jenkins import JenkinsPlugin
 from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
-from plugins.time_x import TimePlugin
+from plugins.time_utils import TimePlugin
 from plugins.github import GithubPlugin
 from plugins.prometheus import PrometheusPlugin
 
@@ -137,6 +137,3 @@ if __name__ == '__main__':
 
     if config:
         main(config)
-
-
-

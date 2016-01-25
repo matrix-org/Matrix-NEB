@@ -23,7 +23,6 @@ class PrometheusPlugin(Plugin):
     #Webhooks:
         #    /neb/prometheus
     TYPE_TRACK = "org.matrix.neb.plugin.prometheus.projects.tracking"
-    TYPE_COLOR = "org.matrix.neb.plugin.prometheus.projects.color"
 
     TRACKING = ["track", "tracking"]
 
@@ -46,22 +45,6 @@ class PrometheusPlugin(Plugin):
                 log.debug("queued message for room " + room_id + " at " + str(self.queue_counter) + ": %s", alert)
                 queue.put((self.queue_counter, room_id, template.render(alert)))
 
-    def cmd_show(self, event, action):
-        """Plugin to report prometheus alerts, the message temlate is represented in prometheus.json
-        change when the prometheus message interface is changed.
-        """
-        pass
-
-    @admin_only
-    def cmd_track(self, event, *args):
-        pass
-
-    def _send_track_event(self, room_id, project_names):
-        pass
-
-    def _get_tracking(self, room_id):
-        pass
-
     def on_event(self, event, event_type):
         self.rooms.update(event)
 
@@ -78,6 +61,11 @@ class PrometheusPlugin(Plugin):
 
 
 class MessageConsumer(Thread):
+    """ This class consumes the produced messages
+        also will try to resend the messages that
+        are failed for instance when the server was down.
+    """
+
     INITIAL_TIMEOUT = 5
     TIMEOUT_INCREMENT = 5
     MAX_TIMEOUT = 60 * 5
