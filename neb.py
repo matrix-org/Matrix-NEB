@@ -9,7 +9,7 @@ from plugins.guess_number import GuessNumberPlugin
 from plugins.jenkins import JenkinsPlugin
 from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
-from plugins.time import TimePlugin
+from plugins.time_utils import TimePlugin
 from plugins.github import GithubPlugin
 
 import logging
