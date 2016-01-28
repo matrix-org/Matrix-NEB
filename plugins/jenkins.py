@@ -196,7 +196,11 @@ class JenkinsPlugin(Plugin):
         name = j["name"]
 
         query_dict = urlparse.parse_qs(urlparse.urlparse(url).query)
-        if "secret" in query_dict and self.store.get("secret_token"):
+        if self.store.get("secret_token"):
+            if "secret" not in query_dict:
+                log.warn("Jenkins webhook: Missing secret.")
+                return ("", 403, {})
+            
             # The jenkins Notification plugin does not support any sort of
             # "execute this code on this json object before you send" so we can't
             # send across HMAC SHA1s like with github :( so a secret token will
