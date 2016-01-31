@@ -10,7 +10,6 @@ from threading import Thread
 
 import time
 import logging as log
-import random
 
 queue = PriorityQueue()
 
@@ -24,7 +23,6 @@ class PrometheusPlugin(Plugin):
         #    /neb/prometheus
     TYPE_TRACK = "org.matrix.neb.plugin.prometheus.projects.tracking"
 
-    TRACKING = ["track", "tracking"]
 
     def __init__(self, *args, **kwargs):
         super(PrometheusPlugin, self).__init__(*args, **kwargs)
@@ -36,14 +34,6 @@ class PrometheusPlugin(Plugin):
         self.consumer = MessageConsumer(self.matrix)
         self.consumer.daemon = True
         self.consumer.start()
-
-    def on_receive_message(self, info):
-        log.info("recv %s", info)
-        template = Template(self.store.get("message_template"))
-        for alert in info["alert"]:
-            for room_id in self.rooms.get_room_ids():
-                log.debug("queued message for room " + room_id + " at " + str(self.queue_counter) + ": %s", alert)
-                queue.put((self.queue_counter, room_id, template.render(alert)))
 
     def on_event(self, event, event_type):
         self.rooms.update(event)
@@ -57,7 +47,13 @@ class PrometheusPlugin(Plugin):
 
     def on_receive_webhook(self, url, data, ip, headers):
         json_data = json.loads(data)
-        self.on_receive_message(json_data)
+        log.info("recv %s", json_data)
+        template = Template(self.store.get("message_template"))
+        for alert in json_data.get("alert", []):
+            for room_id in self.rooms.get_room_ids():
+                log.debug("queued message for room " + room_id + " at " + str(self.queue_counter) + ": %s", alert)
+                queue.put((self.queue_counter, room_id, template.render(alert)))
+                self.queue_counter += 1
 
 
 class MessageConsumer(Thread):
@@ -66,16 +62,16 @@ class MessageConsumer(Thread):
         are failed for instance when the server was down.
     """
 
-    INITIAL_TIMEOUT = 5
-    TIMEOUT_INCREMENT = 5
-    MAX_TIMEOUT = 60 * 5
+    INITIAL_TIMEOUT_S = 5
+    TIMEOUT_INCREMENT_S = 5
+    MAX_TIMEOUT_S = 60 * 5
 
     def __init__(self, matrix):
         super(MessageConsumer, self).__init__()
         self.matrix = matrix
 
     def run(self):
-        timeout = self.INITIAL_TIMEOUT
+        timeout = self.INITIAL_TIMEOUT_S
 
         log.debug("Starting consumer thread")
         while True:
@@ -83,15 +79,15 @@ class MessageConsumer(Thread):
             log.debug("Popped message for room " + room_id + " at position " + str(priority) + ": %s", message)
             try:
                 self.send_message(room_id, message)
-                timeout = self.INITIAL_TIMEOUT
+                timeout = self.INITIAL_TIMEOUT_S
             except Exception as e:
                 log.debug("Failed to send message: %s", e)
                 queue.put((priority, room_id, message))
 
                 time.sleep(timeout)
-                timeout += self.TIMEOUT_INCREMENT
-                if timeout > self.MAX_TIMEOUT:
-                    timeout = self.MAX_TIMEOUT
+                timeout += self.TIMEOUT_INCREMENT_S
+                if timeout > self.MAX_TIMEOUT_S:
+                    timeout = self.MAX_TIMEOUT_S
 
     def send_message(self, room_id, message):
         try:
