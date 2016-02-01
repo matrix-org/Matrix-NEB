@@ -11,6 +11,7 @@ from plugins.jira import JiraPlugin
 from plugins.url import UrlPlugin
 from plugins.time_utils import TimePlugin
 from plugins.github import GithubPlugin
+from plugins.prometheus import PrometheusPlugin
 
 import logging
 import logging.handlers
@@ -77,6 +78,7 @@ def main(config):
         UrlPlugin,
         GithubPlugin,
         JenkinsPlugin,
+        PrometheusPlugin,
     ]
 
     # setup engine
@@ -135,6 +137,3 @@ if __name__ == '__main__':
 
     if config:
         main(config)
-
-
-
