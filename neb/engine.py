@@ -17,6 +17,7 @@ class Engine(object):
         self.plugins = {}
         self.config = config
         self.matrix = matrix_api
+        self.sync_token = None  # set later by initial sync
 
     def setup(self):
         self.webhook = NebHookServer(8500)
@@ -31,7 +32,8 @@ class Engine(object):
                 self.webhook
             )
 
-        sync = self.matrix.initial_sync()
+        sync = self.matrix.sync(timeout_ms=30000, since=self.sync_token)
+        self.parse_sync(sync, initial_sync=True)
         log.debug("Notifying plugins of initial sync results")
         for plugin_name in self.plugins:
             plugin = self.plugins[plugin_name]
@@ -58,7 +60,7 @@ class Engine(object):
         log.info("Parsing membership: %s", event)
         if (event["state_key"] == self.config.user_id
                 and event["content"]["membership"] == "invite"):
-            user_id = event["user_id"]
+            user_id = event["sender"]
             if user_id in self.config.admins:
                 self.matrix.join_room(event["room_id"])
             else:
@@ -69,11 +71,11 @@ class Engine(object):
 
     def parse_msg(self, event):
         body = event["content"]["body"]
-        if (event["user_id"] == self.config.user_id or 
+        if (event["sender"] == self.config.user_id or
                 event["content"]["msgtype"] == "m.notice"):
             return
         if body.startswith(Engine.PREFIX):
-            room = event["room_id"]
+            room = event["room_id"]  # room_id added by us
             try:
                 segments = body.split()
                 cmd = segments[0][1:]
@@ -168,14 +170,33 @@ class Engine(object):
             log.error("Couldn't process event: %s", e)
 
     def event_loop(self):
-        end = "END"
         while True:
-            j = self.matrix.event_stream(timeout=30000, from_token=end)
-            end = j["end"]
-            events = j["chunk"]
-            log.debug("Received: %s", events)
-            for event in events:
-                self.event_proc(event)
+            j = self.matrix.sync(timeout_ms=30000, since=self.sync_token)
+            self.parse_sync(j)
+
+    def parse_sync(self, sync_result, initial_sync=False):
+        self.sync_token = sync_result["next_batch"]  # for when we start syncing
+
+        # check invited rooms
+        rooms = sync_result["rooms"]["invite"]
+        for room_id in rooms:
+            events = rooms[room_id]["invite_state"]["events"]
+            self.process_events(events, room_id)
+
+        # return early if we're performing an initial sync (ie: don't parse joined rooms, just drop the state)
+        if initial_sync:
+            return
+
+        # check joined rooms
+        rooms = sync_result["rooms"]["join"]
+        for room_id in rooms:
+            events = rooms[room_id]["timeline"]["events"]
+            self.process_events(events, room_id)
+
+    def process_events(self, events, room_id):
+        for event in events:
+            event["room_id"] = room_id
+            self.event_proc(event)
 
 
 class RoomContextStore(object):
@@ -219,16 +240,14 @@ class RoomContextStore(object):
             pass
 
     def init_from_sync(self, sync):
-        for room in sync["rooms"]:
+        for room_id in sync["rooms"]["join"]:
             # see if we know anything about these rooms
-            room_id = room["room_id"]
-            if room["membership"] != "join":
-                continue
+            room = sync["rooms"]["join"][room_id]
 
             self.state[room_id] = {}
 
             try:
-                for state in room["state"]:
+                for state in room["state"]["events"]:
                     if state["type"] in self.types:
                         key = (state["type"], state["state_key"])
 

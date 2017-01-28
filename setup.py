@@ -16,6 +16,6 @@ setup(
         "python-dateutil"
     ],
     dependency_links=[
-        "https://github.com/matrix-org/matrix-python-sdk/tarball/v0.0.1#egg=matrix_client-0.0.1"
+        "https://github.com/matrix-org/matrix-python-sdk/tarball/v0.0.5#egg=matrix_client-0.0.5"
     ]
 )

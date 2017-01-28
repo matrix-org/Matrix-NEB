@@ -20,7 +20,7 @@ def admin_only(fn):
     def wrapped(*args, **kwargs):
         config = args[0].config
         event = args[1]
-        if event["user_id"] not in config.admins:
+        if event["sender"] not in config.admins:
             return "Sorry, only %s can do that." % json.dumps(config.admins)
         result = fn(*args, **kwargs)
         return result

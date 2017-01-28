@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+import logging as log
 
 
 class MatrixConfig(object):
@@ -26,8 +27,15 @@ class MatrixConfig(object):
     @classmethod
     def from_file(cls, f):
         j = json.load(f)
+
+        # convert old 0.0.1 matrix-python-sdk urls to 0.0.3+
+        hs_url = j[MatrixConfig.URL]
+        if hs_url.endswith("/_matrix/client/api/v1"):
+            hs_url = hs_url[:-22]
+            log.info("Detected legacy URL, using '%s' instead. Consider changing this in your configuration." % hs_url)
+
         return MatrixConfig(
-            hs_url=j[MatrixConfig.URL],
+            hs_url=hs_url,
             user_id=j[MatrixConfig.USR],
             access_token=j[MatrixConfig.TOK],
             admins=j[MatrixConfig.ADM]
