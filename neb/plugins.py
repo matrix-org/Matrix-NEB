@@ -107,6 +107,8 @@ class Plugin(PluginInterface):
         # more general until no args remain (in which case there isn't a match)
         for index, arg in enumerate(args_array):
             possible_method = "cmd_" + "_".join(args_array[:(len(args_array) - index)])
+            if self.config.case_insensitive:
+                possible_method = possible_method.lower()
             if hasattr(self, possible_method):
                 method = getattr(self, possible_method)
                 remaining_args = [event] + args_array[len(args_array) - index:]
