@@ -77,6 +77,9 @@ class Engine(object):
             try:
                 segments = body.split()
                 cmd = segments[0][1:]
+                if self.config.case_insensitive:
+                    cmd = cmd.lower()
+
                 if cmd == "help":
                     if len(segments) == 2 and segments[1] in self.plugins:
                         # return help on a plugin
