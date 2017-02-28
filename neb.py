@@ -127,7 +127,6 @@ if __name__ == '__main__':
             hsurl = raw_input("Home server URL (e.g. http://localhost:8008): ").strip()
             if hsurl.endswith("/"):
                 hsurl = hsurl[:-1]
-            hsurl = hsurl + "/_matrix/client/api/v1"  # v1 compatibility
             username = raw_input("Full user ID (e.g. @user:domain): ").strip()
             token = raw_input("Access token: ").strip()
             config = generate_config(hsurl, username, token, args.config)
